@@ -1,0 +1,291 @@
+.nav-tabs .nav-link {
+    color: #495057;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    color: #0d6efd;
+    border-color: #dee2e6 #dee2e6 #fff;
+}
+
+.card-header-tab {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.select2-container--bootstrap-5 .select2-selection {
+    width: 100% !important;
+}
+
+.select2-container--bootstrap-5 .select2-dropdown {
+    min-width: 350px !important;
+}
+
+#scheduleModal .select2-dropdown {
+    z-index: 1061;
+}
+
+#materialModal .select2-dropdown {
+    z-index: 1061;
+}
+
+/* Style Jadwal */
+.schedule-day-card {
+    margin-bottom: 1.5rem;
+}
+
+.schedule-day-header {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #343a40;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #0d6efd;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.schedule-entry {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background-color: #fdfdfd;
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.schedule-entry:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.schedule-time {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #0d6efd;
+    width: 100px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.schedule-details {
+    flex-grow: 1;
+    margin-left: 1rem;
+    border-left: 2px solid #e9ecef;
+    padding-left: 1rem;
+}
+
+.schedule-subject {
+    font-weight: 600;
+    color: #212529;
+    margin: 0;
+}
+
+.schedule-teacher {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin: 0;
+}
+
+.schedule-actions {
+    margin-left: 1rem;
+}
+
+.schedule-empty,
+.materials-empty,
+.tasks-empty {
+    text-align: center;
+    color: #6c757d;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 0.375rem;
+}
+
+#schedule-loading,
+#materials-loading,
+#tasks-loading {
+    display: none;
+    text-align: center;
+    padding: 2rem;
+    font-size: 1.2rem;
+    color: #6c757d;
+}
+
+/* Style Bahan Ajar */
+.material-card {
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+    background-color: #fff;
+    transition: all 0.2s ease-in-out;
+}
+
+.material-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.material-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.material-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #212529;
+    margin-bottom: 0.25rem;
+}
+
+.material-subject {
+    font-size: 0.9rem;
+    color: #0d6efd;
+    font-weight: 500;
+    margin-bottom: 0;
+}
+
+.material-body {
+    padding: 1.25rem;
+}
+
+.material-description {
+    font-size: 0.95rem;
+    color: #495057;
+    margin-bottom: 1rem;
+}
+
+.material-attachment {
+    padding: 0.75rem 1rem;
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+    display: flex;
+    align-items: center;
+}
+
+.material-icon {
+    font-size: 1.5rem;
+    width: 40px;
+    text-align: center;
+    margin-right: 0.75rem;
+    color: #6c757d;
+}
+
+.material-file-details {
+    flex-grow: 1;
+}
+
+.material-file-name {
+    font-weight: 600;
+    color: #343a40;
+    text-decoration: none;
+}
+
+.material-file-meta {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* {{-- BARU: Style Kartu Tugas --}} */
+.task-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    margin-bottom: 1.5rem;
+    background-color: #fff;
+    transition: all 0.2s ease-in-out;
+}
+
+.task-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.task-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.task-icon {
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    margin-right: 1rem;
+    color: #fff;
+}
+
+.task-icon.type-task {
+    background-color: #0d6efd;
+}
+
+/* Biru */
+.task-icon.type-quiz {
+    background-color: #fd7e14;
+}
+
+/* Oranye */
+.task-icon.type-exam {
+    background-color: #dc3545;
+}
+
+/* Merah */
+
+.task-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #212529;
+    margin-bottom: 0.1rem;
+}
+
+.task-subject {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 500;
+    margin-bottom: 0;
+}
+
+.task-body {
+    padding: 1.25rem;
+    flex-grow: 1;
+}
+
+.task-description {
+    font-size: 0.95rem;
+    color: #495057;
+    margin-bottom: 1.25rem;
+}
+
+.task-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+.task-meta>div {
+    display: flex;
+    align-items: center;
+}
+
+.task-meta .badge {
+    font-weight: 600;
+}
+
+.task-footer {
+    padding: 0.75rem 1.25rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
