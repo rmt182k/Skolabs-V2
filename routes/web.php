@@ -38,6 +38,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // DASHBOARD
     // ==========================================
     Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/user-credentials', [DashboardController::class, 'getUserCredentials']);
 
     // ==========================================
     // PERMISSION MANAGEMENT API
@@ -89,13 +90,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ==========================================
     Route::get('/permissions', [PermissionController::class, 'index']);
     Route::get('/api/permissions', [PermissionController::class, 'fetchPermissions']);
-    Route::get('/api/permissions', [PermissionController::class, 'fetchPermissions']);
+    Route::get('/api/permissions/{userId}', [PermissionController::class, 'fetchUserPermissions']);
     Route::get('/api/permissions/{id}', [PermissionController::class, 'show']);
     Route::post('/api/permissions', [PermissionController::class, 'store']);
     Route::post('/api/permissions', [PermissionController::class, 'store']);
     Route::put('/api/permissions/{id}', [PermissionController::class, 'update']);
-    Route::put('/api/permissions/{id}', [PermissionController::class, 'update']);
-    Route::delete('/api/permissions/{id}', [PermissionController::class, 'destroy']);
     Route::delete('/api/permissions/{id}', [PermissionController::class, 'destroy']);
 
     // =========================================

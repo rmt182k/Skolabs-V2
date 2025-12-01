@@ -179,4 +179,39 @@ class PermissionController extends Controller
             return response()->json(['success' => false, 'message' => 'An unexpected error occurred while deleting permission.'], 500);
         }
     }
+
+    /**
+     * API: Mengambil permission berdasarkan User ID
+     * Menggabungkan tabel: users -> user_roles -> role_menu_permissions -> permissions
+     */
+    public function fetchUserPermissions($userId)
+    {
+        try {
+            // Optional: Cek apakah user ada (tergantung kebutuhan)
+            $userExists = DB::table('users')->where('id', $userId)->exists();
+            if (!$userExists) {
+                return response()->json(['success' => false, 'message' => 'User not found.'], 404);
+            }
+
+            $permissions = DB::table('permissions')
+                ->join('role_menu_permissions', 'permissions.id', '=', 'role_menu_permissions.permission_id')
+                ->join('user_roles', 'role_menu_permissions.role_id', '=', 'user_roles.role_id')
+                ->where('user_roles.user_id', $userId)
+                ->select('permissions.*') // Ambil semua data permission
+                ->distinct() // Hindari duplikat jika user punya banyak role dengan permission sama
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User permissions retrieved successfully.',
+                'data' => $permissions
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error fetching permissions for User ID ' . $userId . ': ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An unexpected error occurred while fetching user permissions.'
+            ], 500);
+        }
+    }
 }

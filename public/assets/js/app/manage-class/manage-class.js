@@ -9,8 +9,29 @@ $(document).ready(function () {
     });
 
     function getClassIdFromUrl() {
-        const pathParts = window.location.pathname.split('/');
-        return pathParts.pop() || pathParts.pop();
+        // 1. Ambil ID dari URL sebagai default
+        // .filter(Boolean) berguna membuang string kosong jika URL berakhiran '/' (misal: /classes/12/)
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        let urlId = pathParts.pop();
+
+        // 2. Cek apakah global variable userData sudah ada
+        // Jika belum ada (null), kembalikan urlId saja agar tidak error
+        if (!window.userData) {
+            console.warn("userData belum siap, menggunakan ID dari URL.");
+            return urlId;
+        }
+
+        // 3. Akses data menggunakan struktur BARU
+        // userData.role adalah object { id, name }
+        // userData.class adalah object { id, name } atau null
+        const roleName = window.userData.role ? window.userData.role.name : '';
+        const studentClassId = window.userData.class ? window.userData.class.id : null;
+
+        // 4. Logika Override
+        if (roleName === 'student') {
+            return studentClassId;
+        }
+        return urlId;
     }
 
     const CLASS_ID = getClassIdFromUrl();
@@ -153,44 +174,50 @@ $(document).ready(function () {
             });
     }
 
-    function getPermissionsFromApi(targetMenuTitle) {
+    function getPermissionsFromApi() {
         let resultPermissions = [];
 
         $.ajax({
-            url: '/api/menu-users',
+            url: `/api/permissions/${window.userData.id}`,
             method: 'GET',
             async: false,
+            dataType: 'json',
             success: function (response) {
                 if (response.success && Array.isArray(response.data)) {
-                    const allMenus = response.data.flatMap(item => {
-                        return [item, ...(item.children || [])];
-                    });
-                    const foundMenu = allMenus.find(menu => menu.title === targetMenuTitle);
-                    if (foundMenu && foundMenu.permissions) {
-                        resultPermissions = foundMenu.permissions;
-                    }
+                    resultPermissions = response.data;
                 }
             },
             error: function (xhr) {
-                console.error("Gagal mengambil permission untuk:", targetMenuTitle);
+                console.error("Gagal mengambil permission user:", xhr.responseText);
             }
         });
 
         return resultPermissions;
     }
 
-    function can(permissionName) {
-        return permissions.includes(permissionName);
-    }
+
 
     function renderClassTasks(data) {
         const container = $('#tasks-container');
 
-        // 1. AMBIL PERMISSION DARI API (Synchronous)
-        const permissions = getPermissionsFromApi('Class');
+        // 1. Ambil data mentah (Array of Objects) dari API
+        // Contoh isi: [{id: 1, name: 'task.create'}, {id: 2, name: 'task.edit'}]
+        const rawPermissions = getPermissionsFromApi();
 
-        // Helper kecil untuk cek permission di dalam function ini
-        const can = (name) => permissions.includes(name);
+        // 2. Mapping: Kita ubah menjadi Array of Strings agar mudah dicek
+        // Hasilnya jadi: ['task.create', 'task.edit']
+        const myPermissionNames = rawPermissions.map(function (permissionItem) {
+            return permissionItem.name;
+        });
+
+        function can(permissionName) {
+            // Cek apakah array myPermissionNames memiliki string permissionName
+            if (myPermissionNames.includes(permissionName)) {
+                return true;
+            } else {
+                return false;
+            }
+        }
 
         container.empty();
 
@@ -204,6 +231,10 @@ $(document).ready(function () {
 
         data.forEach(task => {
             const { status, badgeClass } = getTaskStatus(task.start_time, task.end_time);
+
+            const now = new Date();
+            const endTime = new Date(task.end_time);
+            const isExpired = now > endTime;
 
             let iconClass = 'fa-file-alt';
             if (task.type === 'quiz') iconClass = 'fa-question-circle';
@@ -220,24 +251,29 @@ $(document).ready(function () {
 
             // 1. Permission: answer (Untuk Siswa)
             if (can('answer')) {
-                const isClosed = status === 'Ditutup';
+                // Tombol ditutup jika status teks 'Ditutup' ATAU waktu sekarang sudah melewati end_time
+                const isClosed = status === 'Ditutup' || isExpired;
+
                 const btnClass = isClosed ? 'btn-secondary disabled' : 'btn-success';
                 const btnText = isClosed ? 'Ditutup' : 'Jawab Soal';
 
+                // Jika ditutup, kita ubah link jadi javascript:void(0) agar tidak bisa diklik (double protection)
+                const finalUrl = isClosed ? 'javascript:void(0)' : answerUrl;
+
                 buttonsHtml += `
-                <a href="${answerUrl}" class="btn btn-sm ${btnClass} btn-answer-task me-1">
-                    <i class="fas fa-pen-square me-1"></i> ${btnText}
-                </a>
-            `;
+            <a href="${finalUrl}" class="btn btn-sm ${btnClass} btn-answer-task me-1" ${isClosed ? 'aria-disabled="true"' : ''}>
+                <i class="fas fa-pen-square me-1"></i> ${btnText}
+            </a>
+        `;
             }
 
             // 2. Permission: grade (Untuk Guru melihat nilai)
             if (can('grade')) {
                 buttonsHtml += `
-                <a href="${submissionsUrl}" class="btn btn-sm btn-outline-secondary me-1" title="Lihat Hasil Siswa">
-                    <i class="fas fa-clipboard-check me-1"></i> Hasil
-                </a>
-            `;
+                    <a href="${submissionsUrl}" class="btn btn-sm btn-outline-secondary me-1" title="Lihat Hasil Siswa">
+                        <i class="fas fa-clipboard-check me-1"></i> Hasil
+                    </a>
+                `;
             }
 
             // 3. Permission: edit (Untuk Guru/Admin edit soal)
