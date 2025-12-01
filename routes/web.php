@@ -119,6 +119,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/api/subjects/{id}', [SubjectController::class, 'update']);
     Route::delete('/api/subjects/{id}', [SubjectController::class, 'destroy']);
     Route::get('/api/subjects-assignments', [SubjectController::class, 'fetchAllAssignments']);
+    Route::get('/api/subjects-assignments/{teacherId}', [SubjectController::class, 'fetchTeacherAssignments']);
     Route::post('/api/subjects-assignments', [SubjectController::class, 'storeAssignment']);
     Route::delete('/api/subjects-assignments/{id}', [SubjectController::class, 'destroyAssignment']);
     Route::get('/api/subjects/assigned/search', [SubjectController::class, 'searchAssignedSubjects']);
@@ -139,7 +140,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // =========================================
     Route::get('/classes', [ClassController::class, 'index']);
     Route::get('/api/classes', [ClassController::class, 'fetchAll']);
-    Route::get('/api/classes/fetchUserClasses', [ClassController::class, 'fetchUserClasses']);
+    Route::get('/api/classes/fetchUserClasses/{userId}', [ClassController::class, 'fetchUserClasses']);
     Route::post('/api/classes', [ClassController::class, 'store']);
     Route::get('/api/classes/{id}', [ClassController::class, 'show']);
     Route::put('/api/classes/{id}', [ClassController::class, 'update']);

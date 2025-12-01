@@ -16,6 +16,7 @@ class PermissionSeeder extends Seeder
         $now = Carbon::now();
 
         $permissions = [
+            // --- Basic CRUD Permissions ---
             [
                 'name' => 'view',
                 'display_name' => 'View',
@@ -44,6 +45,8 @@ class PermissionSeeder extends Seeder
                 'created_at' => $now,
                 'updated_at' => $now,
             ],
+
+            // --- Approval & Management Permissions ---
             [
                 'name' => 'approve',
                 'display_name' => 'Approve',
@@ -59,6 +62,15 @@ class PermissionSeeder extends Seeder
                 'updated_at' => $now,
             ],
             [
+                'name' => 'manage',
+                'display_name' => 'Manage',
+                'description' => 'Dapat mengatur konfigurasi sistem.',
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+
+            // --- Data Handling Permissions ---
+            [
                 'name' => 'export',
                 'display_name' => 'Export',
                 'description' => 'Dapat mengekspor data ke file.',
@@ -72,15 +84,32 @@ class PermissionSeeder extends Seeder
                 'created_at' => $now,
                 'updated_at' => $now,
             ],
+
+            // --- LMS Specific Permissions (REQUESTED) ---
             [
-                'name' => 'manage',
-                'display_name' => 'Manage',
-                'description' => 'Dapat mengatur dan mengelola konfigurasi atau data sistem.',
+                'name' => 'answer',
+                'display_name' => 'Answer',
+                'description' => 'Dapat mengerjakan dan mengirim jawaban tugas/kuis.', // Khusus untuk Student
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'name' => 'grade',
+                'display_name' => 'Grade',
+                'description' => 'Dapat memberikan nilai pada jawaban siswa.', // Khusus untuk Teacher
+                'created_at' => $now,
+                'updated_at' => $now,
+            ],
+            [
+                'name' => 'generate_ai',
+                'display_name' => 'Generate AI',
+                'description' => 'Dapat menggunakan fitur AI untuk evaluasi atau pembuatan soal.', // Sesuai fitur AI LMS kamu
                 'created_at' => $now,
                 'updated_at' => $now,
             ],
         ];
 
-        DB::table('permissions')->insert($permissions);
+        // Menggunakan insertOrIgnore agar jika seeder dijalankan ulang tidak error karena duplikat
+        DB::table('permissions')->insertOrIgnore($permissions);
     }
 }

@@ -11,12 +11,18 @@ class DashboardController extends Controller
     public function index()
     {
         $userId = Auth::user()->id;
-
         $role = DB::table('user_roles')
             ->join('roles', 'user_roles.role_id', '=', 'roles.id')
             ->where('user_id', $userId)
             ->value('roles.name');
 
-        return view('dashboard.index', compact('role'));
+        $userCredentials = [
+            'id' => $userId,
+            'name' => Auth::user()->name,
+            'email' => Auth::user()->email,
+            'role' => $role,
+        ];
+
+        return view('dashboard.index', compact('userCredentials'));
     }
 }

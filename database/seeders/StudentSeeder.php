@@ -45,7 +45,7 @@ class StudentSeeder extends Seeder
                 'name' => $faker->name,
                 'email' => $faker->unique()->safeEmail,
                 'email_verified_at' => now(),
-                'password' => Hash::make('password'), // password default
+                'password' => Hash::make('1'), // password default
                 'created_at' => now(),
                 'updated_at' => now(),
             ];

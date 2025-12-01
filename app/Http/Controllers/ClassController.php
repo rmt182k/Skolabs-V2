@@ -44,15 +44,10 @@ class ClassController extends Controller
         }
     }
 
-    public function fetchUserClasses(Request $request)
+    public function fetchUserClasses($userId)
     {
         try {
-            $user = Auth::user();
-            $userId = $user->id;
-
-            // Ambil nama role user dari tabel roles melalui user_roles
-            // Asumsi kamu menggunakan query builder manual, tapi jika pakai Spatie/Laratrust bisa lebih mudah ($user->hasRole('...'))
-            // Di sini saya pakai query manual sesuai style kodemu:
+            // Ambil role
             $roles = DB::table('user_roles as ur')
                 ->join('roles as r', 'ur.role_id', '=', 'r.id')
                 ->where('ur.user_id', $userId)
@@ -60,56 +55,84 @@ class ClassController extends Controller
                 ->toArray();
 
             $query = $this->getBaseClassQuery();
+            $isTeacherContext = false; // Flag untuk menandai apakah perlu format ulang data subject
 
             // LOGIKA PENGECEKAN ROLE
             if (in_array('super_admin', $roles) || in_array('admin', $roles)) {
-                // ===============================================
-                // CASE 1: ADMIN / SUPER ADMIN
-                // ===============================================
-                // Tidak perlu filter tambahan, ambil semua.
+                // CASE 1: ADMIN
                 $message = 'Data Seluruh Kelas (Admin).';
 
             } elseif (in_array('teacher', $roles) || in_array('guru', $roles)) {
-                // ===============================================
                 // CASE 2: GURU (TEACHER)
-                // ===============================================
-                // Logika: Cek class_schedules dimana user_id = guru ini
-                // Kita gunakan DISTINCT karena satu guru bisa mengajar user mapel berbeda di kelas yang sama (hari beda)
-                // agar kelas tidak muncul double.
-
+                // Join ke class_schedules, lalu Join lagi ke subjects
                 $query->join('class_schedules as cs', 'c.id', '=', 'cs.class_id')
+                    ->join('subjects as s', 'cs.subject_id', '=', 's.id') // <--- HUBUNGKAN KE SUBJECTS
                     ->where('cs.user_id', $userId)
-                    ->select('c.*', 'el.name as educational_level_name', 'm.name as major_name', 'ay.name as academic_year_name') // Re-select untuk menghindari ambiguitas kolom id setelah join
-                    ->distinct();
+                    ->select(
+                        'c.*',
+                        'el.name as educational_level_name',
+                        'm.name as major_name',
+                        'ay.name as academic_year_name',
+                        // Ambil data Subject juga
+                        's.id as subject_id',
+                        's.name as subject_name',
+                        's.code as subject_code'
+                    );
 
-                $message = 'Data Kelas Ajar Anda.';
+                // PENTING: Jangan pakai distinct() di query SQL jika ingin mengambil subject,
+                // karena kita butuh data subject yang berbeda-beda itu ditarik dulu.
+                // Kita akan merapikannya (distinct) menggunakan Collection di bawah.
+
+                $isTeacherContext = true;
+                $message = 'Data Kelas Ajar Anda beserta Mata Pelajaran.';
 
             } elseif (in_array('student', $roles) || in_array('murid', $roles)) {
-                // ===============================================
-                // CASE 3: MURID (STUDENT)
-                // ===============================================
-                // Logika: Cek class_enrollments dimana student_id = murid ini
-
+                // CASE 3: MURID
                 $query->join('class_enrollments as ce', 'c.id', '=', 'ce.class_id')
                     ->where('ce.student_id', $userId);
 
+                // Tambahkan distinct agar jika murid terdaftar ganda (error data) tetap muncul satu
+                $query->distinct();
                 $message = 'Data Kelas Anda.';
 
             } else {
-                // Jika role tidak dikenali
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Role tidak memiliki akses ke data kelas.',
-                    'data' => []
-                ], 403);
+                return response()->json(['success' => false, 'message' => 'Akses ditolak.'], 403);
             }
 
-            $classes = $query->orderBy('c.created_at', 'desc')->get();
+            // Eksekusi Query
+            $rawResults = $query->orderBy('c.created_at', 'desc')->get();
+
+            // LOGIKA TRANSFORMAT DATA (KHUSUS GURU)
+            // Agar kelas yang sama tidak muncul 2 kali, tapi subjects-nya digabung jadi array
+            if ($isTeacherContext) {
+                $classes = $rawResults->groupBy('id')->map(function ($classRows) {
+                    // Ambil info detail kelas dari baris pertama saja
+                    $classInfo = $classRows->first();
+
+                    // Buat property baru 'subjects' yang berisi list mapel di kelas ini
+                    $classInfo->subjects = $classRows->map(function ($row) {
+                        return [
+                            'id' => $row->subject_id,
+                            'name' => $row->subject_name,
+                            'code' => $row->subject_code
+                        ];
+                    })->unique('id')->values(); // Pastikan subject unik & reset key array
+
+                    // Bersihkan property temp (opsional, biar rapi response json-nya)
+                    unset($classInfo->subject_id);
+                    unset($classInfo->subject_name);
+                    unset($classInfo->subject_code);
+
+                    return $classInfo;
+                })->values(); // Reset key array utama
+            } else {
+                // Untuk Admin & Student, gunakan data langsung
+                $classes = $rawResults;
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => $message,
-                'role_detected' => $roles, // Debugging info (opsional)
                 'data' => $classes
             ]);
 

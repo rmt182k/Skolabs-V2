@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Auth;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -270,6 +271,51 @@ class SubjectController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal memuat data penugasan.' . $e->getMessage(),
+                'data' => []
+            ], 500);
+        }
+    }
+
+    public function fetchTeacherAssignments($teacherId)
+    {
+        try {
+            $assignments = DB::table('subjects_assignment as sa')
+                ->join('users as u', 'sa.user_id', '=', 'u.id')
+                ->join('subjects as s', 'sa.subject_id', '=', 's.id')
+                ->select(
+                    'sa.id',
+                    'u.name as teacher_name',
+                    's.name as subject_name',
+                    's.code as subject_code'
+                )
+                ->where('sa.user_id', $teacherId)
+                ->orderBy('sa.created_at', 'desc')
+                ->get();
+
+            $data = $assignments->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'teacher' => [
+                        'name' => $item->teacher_name,
+                    ],
+                    'subject' => [
+                        'name' => $item->subject_name,
+                        'code' => $item->subject_code,
+                    ]
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data Penugasan berhasil diambil.',
+                'data' => $data
+            ]);
+
+        } catch (Exception $e) {
+            Log::error('Error fetching assignments: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat data penugasan.',
                 'data' => []
             ], 500);
         }

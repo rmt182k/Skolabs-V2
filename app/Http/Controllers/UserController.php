@@ -498,17 +498,22 @@ class UserController extends Controller
             if ($request->has('exclude_class_id') && $request->input('exclude_class_id') != '') {
                 $excludeClassId = $request->input('exclude_class_id');
 
+                // 1. Cari tahu Tahun Ajaran dari kelas yang sedang dibuka (Class 1B)
                 $classAcademicYearId = DB::table('classes')
                     ->where('id', $excludeClassId)
                     ->value('academic_year_id');
 
                 if ($classAcademicYearId) {
-                    $studentsInClass = DB::table('class_enrollments')
-                        ->where('class_id', $excludeClassId)
-                        ->where('academic_year_id', $classAcademicYearId)
+                    // 2. LOGIKA BARU:
+                    // Ambil SEMUA student_id yang sudah terdaftar di kelas MANAPUN
+                    // pada tahun ajaran tersebut.
+                    $studentsWithClass = DB::table('class_enrollments')
+                        ->where('academic_year_id', $classAcademicYearId) // <--- Kuncinya disini
                         ->pluck('student_id');
 
-                    $query->whereNotIn('users.id', $studentsInClass);
+                    // 3. Keluarkan mereka dari list pencarian
+                    // Jadi siswa kelas 1A tidak akan muncul saat cari siswa untuk 1B
+                    $query->whereNotIn('users.id', $studentsWithClass);
                 }
             }
 
@@ -521,7 +526,7 @@ class UserController extends Controller
             // Logika Select2 (term, exclude) kita abaikan sementara jika ini murni untuk DataTables
             // Mari kita buat query yang bersih HANYA untuk DataTables
 
-             $queryForDataTables = DB::table('users')
+            $queryForDataTables = DB::table('users')
                 ->join('user_roles', 'users.id', '=', 'user_roles.user_id')
                 ->leftJoin('user_details', 'users.id', '=', 'user_details.user_id')
                 ->where('user_roles.role_id', $roleId)
@@ -537,8 +542,8 @@ class UserController extends Controller
                     'user_details.phone_number',
                     'user_details.avatar'
                 )
-                 ->distinct('users.id') // <-- Tambahkan distinct
-                 ->orderBy('users.name', 'asc');
+                ->distinct('users.id') // <-- Tambahkan distinct
+                ->orderBy('users.name', 'asc');
 
 
             // Cek apakah ini permintaan Select2?

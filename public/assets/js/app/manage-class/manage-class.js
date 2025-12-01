@@ -153,8 +153,45 @@ $(document).ready(function () {
             });
     }
 
+    function getPermissionsFromApi(targetMenuTitle) {
+        let resultPermissions = [];
+
+        $.ajax({
+            url: '/api/menu-users',
+            method: 'GET',
+            async: false,
+            success: function (response) {
+                if (response.success && Array.isArray(response.data)) {
+                    const allMenus = response.data.flatMap(item => {
+                        return [item, ...(item.children || [])];
+                    });
+                    const foundMenu = allMenus.find(menu => menu.title === targetMenuTitle);
+                    if (foundMenu && foundMenu.permissions) {
+                        resultPermissions = foundMenu.permissions;
+                    }
+                }
+            },
+            error: function (xhr) {
+                console.error("Gagal mengambil permission untuk:", targetMenuTitle);
+            }
+        });
+
+        return resultPermissions;
+    }
+
+    function can(permissionName) {
+        return permissions.includes(permissionName);
+    }
+
     function renderClassTasks(data) {
         const container = $('#tasks-container');
+
+        // 1. AMBIL PERMISSION DARI API (Synchronous)
+        const permissions = getPermissionsFromApi('Class');
+
+        // Helper kecil untuk cek permission di dalam function ini
+        const can = (name) => permissions.includes(name);
+
         container.empty();
 
         if (data.length === 0) {
@@ -162,61 +199,94 @@ $(document).ready(function () {
             return;
         }
 
+        // Sort tugas berdasarkan waktu berakhir (terbaru di atas)
         data.sort((a, b) => new Date(b.end_time) - new Date(a.end_time));
 
         data.forEach(task => {
             const { status, badgeClass } = getTaskStatus(task.start_time, task.end_time);
 
-            let iconClass = 'fa-file-alt'; // default (task)
-            if (task.type === 'quiz') iconClass = 'fa-question-circle'; // quiz
-            if (task.type === 'exam') iconClass = 'fa-graduation-cap'; // exam
+            let iconClass = 'fa-file-alt';
+            if (task.type === 'quiz') iconClass = 'fa-question-circle';
+            if (task.type === 'exam') iconClass = 'fa-graduation-cap';
 
             const editUrl = `/classes/${CLASS_ID}/tasks/${task.id}/edit`;
             const submissionsUrl = `/classes/${CLASS_ID}/tasks/${task.id}/submissions`;
-
-            // ⭐⭐ BARU: URL untuk tombol jawab soal (sisi siswa)
             const answerUrl = `/classes/${CLASS_ID}/tasks/${task.id}/answer`;
 
+            // ============================================================
+            // MULAI LOGIKA PEMBUATAN TOMBOL DINAMIS
+            // ============================================================
+            let buttonsHtml = '';
+
+            // 1. Permission: answer (Untuk Siswa)
+            if (can('answer')) {
+                const isClosed = status === 'Ditutup';
+                const btnClass = isClosed ? 'btn-secondary disabled' : 'btn-success';
+                const btnText = isClosed ? 'Ditutup' : 'Jawab Soal';
+
+                buttonsHtml += `
+                <a href="${answerUrl}" class="btn btn-sm ${btnClass} btn-answer-task me-1">
+                    <i class="fas fa-pen-square me-1"></i> ${btnText}
+                </a>
+            `;
+            }
+
+            // 2. Permission: grade (Untuk Guru melihat nilai)
+            if (can('grade')) {
+                buttonsHtml += `
+                <a href="${submissionsUrl}" class="btn btn-sm btn-outline-secondary me-1" title="Lihat Hasil Siswa">
+                    <i class="fas fa-clipboard-check me-1"></i> Hasil
+                </a>
+            `;
+            }
+
+            // 3. Permission: edit (Untuk Guru/Admin edit soal)
+            if (can('edit')) {
+                buttonsHtml += `
+                <a href="${editUrl}" class="btn btn-sm btn-outline-primary me-1" title="Edit Tugas">
+                    <i class="fas fa-pencil-alt"></i> Edit
+                </a>
+            `;
+            }
+
+            // 4. Permission: delete (Untuk Guru/Admin hapus soal)
+            if (can('delete')) {
+                buttonsHtml += `
+                <button class="btn btn-sm btn-outline-danger btn-delete-task" data-id="${task.id}" data-title="${task.title}" title="Hapus Tugas">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            `;
+            }
+            // ============================================================
+
             const taskHtml = `
-                <div class="col-xl-6">
-                    <div class="task-card" data-id="${task.id}">
-                        <div class="task-header">
-                            <div class="task-icon type-${task.type}">
-                                <i class="fas ${iconClass}"></i>
-                            </div>
-                            <div>
-                                <h6 class="task-title">${task.title}</h6>
-                                <p class="task-subject">${task.subject_name || '<i>Mapel Dihapus</i>'}</p>
-                            </div>
+            <div class="col-xl-6">
+                <div class="task-card" data-id="${task.id}">
+                    <div class="task-header">
+                        <div class="task-icon type-${task.type}">
+                            <i class="fas ${iconClass}"></i>
                         </div>
-                        <div class="task-body">
-                            ${task.description ? `<p class="task-description">${task.description.substring(0, 150)}...</p>` : '<p class="task-description fst-italic text-muted">Tidak ada deskripsi.</p>'}
-
-                            <div class="task-meta">
-                                <div><i class="fas fa-tag me-2 text-muted"></i> <strong>${task.type.charAt(0).toUpperCase() + task.type.slice(1)}</strong></div>
-                                <div><i class="fas fa-info-circle me-2 text-muted"></i> <span class="badge ${badgeClass}">${status}</span></div>
-                                <div><i class="fas fa-hourglass-start me-2 text-muted"></i> ${new Date(task.start_time).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</div>
-                                <div><i class="fas fa-hourglass-end me-2 text-muted"></i> ${new Date(task.end_time).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</div>
-                            </div>
-                        </div>
-                        <div class="task-footer">
-
-                            <a href="${answerUrl}" class="btn btn-sm btn-success btn-answer-task">
-                                <i class="fas fa-pen-square me-1"></i> Jawab Soal
-                            </a>
-                            <a href="${submissionsUrl}" class="btn btn-sm btn-outline-secondary">
-                                <i class="fas fa-clipboard-check me-1"></i> Hasil Siswa
-                            </a>
-                            <a href="${editUrl}" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-pencil-alt me-1"></i> Edit
-                            </a>
-                            <button class="btn btn-sm btn-outline-danger btn-delete-task" data-id="${task.id}" data-title="${task.title}">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                        <div>
+                            <h6 class="task-title">${task.title}</h6>
+                            <p class="task-subject">${task.subject_name || '<i>Mapel Dihapus</i>'}</p>
                         </div>
                     </div>
+                    <div class="task-body">
+                        ${task.description ? `<p class="task-description">${task.description.substring(0, 150)}...</p>` : '<p class="task-description fst-italic text-muted">Tidak ada deskripsi.</p>'}
+
+                        <div class="task-meta">
+                            <div><i class="fas fa-tag me-2 text-muted"></i> <strong>${task.type.charAt(0).toUpperCase() + task.type.slice(1)}</strong></div>
+                            <div><i class="fas fa-info-circle me-2 text-muted"></i> <span class="badge ${badgeClass}">${status}</span></div>
+                            <div><i class="fas fa-hourglass-start me-2 text-muted"></i> ${new Date(task.start_time).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+                            <div><i class="fas fa-hourglass-end me-2 text-muted"></i> ${new Date(task.end_time).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</div>
+                        </div>
+                    </div>
+                    <div class="task-footer">
+                        ${buttonsHtml}
+                    </div>
                 </div>
-            `;
+            </div>
+        `;
             container.append(taskHtml);
         });
     }

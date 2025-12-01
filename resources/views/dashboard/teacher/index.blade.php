@@ -82,6 +82,7 @@
                         <thead class="thead-light">
                             <tr>
                                 <th>Nama Kelas</th>
+                                <th>Mata Pelajaran</th> {{-- KOLOM BARU --}}
                                 <th>Tingkat</th>
                                 <th>Jurusan</th>
                                 <th>Tahun Ajaran</th>
@@ -148,45 +149,58 @@
                 }
             });
 
-            // API Endpoints berdasarkan route list kamu
+            // API Endpoints
             const API = {
-                CLASSES: '/api/classes/fetchUserClasses', // Asumsi Controller memfilter kelas user jika role teacher, atau return all
-                MY_SUBJECTS: '/api/subjects-assignments' // Endpoint khusus assignment mapel user login
+                CLASSES: '/api/classes/fetchUserClasses/{{ $userCredentials['id'] }}',
+                MY_SUBJECTS: '/api/subjects-assignments/{{ $userCredentials['id'] }}' // Pastikan route ini aktif
             };
 
             /**
-             * 1. Load Data Kelas
-             * Menggunakan /api/classes
+             * 1. Load Data Kelas (Tabel)
              */
             function loadTeacherClasses() {
                 const $tableBody = $('#teacher-classes-body');
-                $tableBody.html('<tr><td colspan="5" class="text-center">Loading classes...</td></tr>');
+                $tableBody.html('<tr><td colspan="6" class="text-center">Loading classes...</td></tr>');
 
                 $.get(API.CLASSES)
                     .done(res => {
-                        const classes = res.data || res; // Handle wrapper data
+                        const classes = res.data || res;
                         $tableBody.empty();
 
-                        // Update Statistik Card
                         $('#stat-my-classes').text(classes.length);
 
                         if (classes.length === 0) {
                             $tableBody.html(
-                                '<tr><td colspan="5" class="text-center">Belum ada kelas yang terdaftar.</td></tr>'
-                                );
+                                '<tr><td colspan="6" class="text-center">Belum ada kelas yang terdaftar.</td></tr>'
+                            );
                             return;
                         }
 
                         classes.forEach(cls => {
-                            // Cek kelengkapan data (antisipasi null)
                             const majorName = cls.major ? cls.major.name : '-';
                             const academicYear = cls.academic_year_name ? cls.academic_year_name : '-';
-                            const eduLevel = cls.educational_level ? cls.educational_level.name : cls
-                                .grade_level;
+                            const eduLevel = cls.educational_level ? cls.educational_level.name : (cls
+                                .grade_level || '-');
+
+                            // Logic Badge Subject
+                            let subjectBadges = '';
+                            if (cls.subjects && cls.subjects.length > 0) {
+                                cls.subjects.forEach(sub => {
+                                    subjectBadges +=
+                                        `<span class="badge badge-info mr-1 mb-1">${sub.name}</span>`;
+                                });
+                            } else {
+                                subjectBadges =
+                                    '<span class="text-muted text-xs font-italic">Tidak ada mapel</span>';
+                            }
 
                             const row = `
                         <tr>
-                            <td><strong>${cls.name}</strong> <span class="badge badge-secondary ml-1">${cls.suffix || ''}</span></td>
+                            <td>
+                                <strong>${cls.name}</strong>
+                                <span class="badge badge-secondary ml-1">${cls.suffix || ''}</span>
+                            </td>
+                            <td>${subjectBadges}</td>
                             <td>${eduLevel}</td>
                             <td>${majorName}</td>
                             <td>${academicYear}</td>
@@ -204,45 +218,50 @@
                         });
                     })
                     .fail(xhr => {
-                        console.error(xhr);
+                        console.error("Error loading classes:", xhr);
                         $tableBody.html(
-                            '<tr><td colspan="5" class="text-center text-danger">Gagal memuat data kelas.</td></tr>'
-                            );
+                            '<tr><td colspan="6" class="text-center text-danger">Gagal memuat data kelas.</td></tr>'
+                        );
                         $('#stat-my-classes').text('0');
                     });
             }
 
             /**
-             * 2. Load Data Mata Pelajaran Guru
-             * Menggunakan /api/subjects-assignments
+             * 2. Load Data Mata Pelajaran (Card & List Bawah)
+             * INI YANG HILANG DI KODE SEBELUMNYA
              */
             function loadTeacherSubjects() {
                 const $subjectList = $('#teacher-subjects-list');
-                $subjectList.html('<div class="col-12">Loading subjects...</div>');
+                const $statCounter = $('#stat-my-subjects');
+
+                // Set Loading State
+                $subjectList.html('<div class="col-12 text-center">Loading subjects...</div>');
 
                 $.get(API.MY_SUBJECTS)
                     .done(res => {
-                        // Asumsi response mengembalikan list subject yang di-assign ke user ini
+                        // Handle struktur data: kadang API return {data: [...]}, kadang langsung [...]
+                        // Sesuaikan dengan response "fetchTeacherAssignments" kamu yang ada di turn 1
                         const subjects = res.data || res;
+
                         $subjectList.empty();
 
-                        // Update Statistik Card
-                        $('#stat-my-subjects').text(subjects.length);
+                        // Update angka di Card Hijau
+                        $statCounter.text(subjects.length);
 
                         if (subjects.length === 0) {
+                            $statCounter.text(0);
                             $subjectList.html(
-                                '<div class="col-12 text-muted">Anda belum di-assign ke mata pelajaran apapun.</div>'
-                                );
+                                '<div class="col-12 text-muted text-center">Anda belum di-assign ke mata pelajaran apapun.</div>'
+                            );
                             return;
                         }
 
+                        // Loop untuk membuat card kecil di bagian bawah (List Mapel)
                         subjects.forEach(item => {
-                            // Struktur data tergantung return API subjects-assignments.
-                            // Biasanya item.subject atau item langsung. Sesuaikan disini.
-                            // Kita asumsi item memiliki relasi 'subject' atau field name langsung.
-                            const subjName = item.subject ? item.subject.name : (item.name ||
-                                'Unknown Subject');
-                            const subjCode = item.subject ? item.subject.code : (item.code || '');
+                            // Cek struktur JSON dari fetchTeacherAssignments (Turn 1)
+                            // Di turn 1, formatnya: item.subject.name dan item.subject.code
+                            const subjName = item.subject ? item.subject.name : item.subject_name;
+                            const subjCode = item.subject ? item.subject.code : item.subject_code;
 
                             const card = `
                         <div class="col-xl-3 col-md-6 mb-3">
@@ -260,13 +279,15 @@
                         });
                     })
                     .fail(xhr => {
-                        console.error(xhr);
-                        $subjectList.html('<div class="col-12 text-danger">Gagal memuat mata pelajaran.</div>');
-                        $('#stat-my-subjects').text('0');
+                        console.error("Error loading subjects:", xhr);
+                        $subjectList.html(
+                            '<div class="col-12 text-danger text-center">Gagal memuat mata pelajaran.</div>'
+                            );
+                        $statCounter.text('Error');
                     });
             }
 
-            // Initialize Data Loading
+            // Panggil kedua fungsi
             loadTeacherClasses();
             loadTeacherSubjects();
         });

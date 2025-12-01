@@ -8,6 +8,6 @@
         @include('layouts.components.breadcrumb')
 
         {{-- Load Dashboard --}}
-        @includeIf("dashboard.$role.index")
+        @includeIf('dashboard.' . $userCredentials['role'] . '.index')
     </div>
 @endsection

@@ -289,7 +289,7 @@
 
                             // Render Info Kelas (Sesuai JSON API kamu)
                             let classNameFull = cls.name + ' - ' + cls.educational_level_name;
-                            if(cls.major_name){
+                            if (cls.major_name) {
                                 classNameFull += ' - ' + cls.major_name;
                             }
                             // if (cls.suffix) classNameFull += ' ' + cls.suffix;
@@ -421,13 +421,45 @@
                     });
             }
 
+            function getPermissionsFromApi(targetMenuTitle) {
+                let resultPermissions = [];
+
+                $.ajax({
+                    url: '/api/menu-users',
+                    method: 'GET',
+                    async: false,
+                    success: function(response) {
+                        if (response.success && Array.isArray(response.data)) {
+                            const allMenus = response.data.flatMap(item => {
+                                return [item, ...(item.children || [])];
+                            });
+                            const foundMenu = allMenus.find(menu => menu.title === targetMenuTitle);
+                            if (foundMenu && foundMenu.permissions) {
+                                resultPermissions = foundMenu.permissions;
+                            }
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error("Gagal mengambil permission untuk:", targetMenuTitle);
+                    }
+                });
+
+                return resultPermissions;
+            }
+
+            function can(permissionName) {
+                return permissions.includes(permissionName);
+            }
+
             // ==========================================================
             // 4. LOAD TUGAS (Placeholder Logic)
             // ==========================================================
             function loadTasks(classId) {
                 const $container = $('#tasks-container');
+                const permissions = getPermissionsFromApi('Class');
+
                 // Gunakan endpoint khusus student view
-                $.get(`/api/classes/${classId}/tasks/student-view`)
+                $.get(`/api/classes/${classId}/tasks/`)
                     .done(function(response) {
                         const tasks = response.data || response; // Handle wrapper
                         $container.empty();
@@ -444,34 +476,57 @@
                         let pendingCount = tasks.filter(t => t.submission_status !== 'submitted').length;
                         $('#stat-pending-tasks').text(pendingCount);
 
+                        // --- LOOPING TUGAS DIMULAI ---
                         tasks.forEach(task => {
+
+                            // 1. Tentukan Warna Badge
                             let badgeColor = 'primary';
                             if (task.type === 'quiz') badgeColor = 'warning';
                             if (task.type === 'exam') badgeColor = 'danger';
 
-                            // Sesuaikan field subject name dengan API Tugas kamu
+                            // 2. Sesuaikan Nama Mapel
                             const subjectName = task.subject_name ? task.subject_name : (task.subject ?
                                 task.subject.name : 'General');
 
+                            // 3. LOGIKA TOMBOL (HARUS DI DALAM LOOP)
+                            // Agar task.id terbaca sesuai tugas yang sedang di-loop
+                            let buttonsHtml = '';
+
+                            // Cek permission 'answer' (sesuai seeder kita)
+                            if (can('answer')) {
+                                // Tombol aktif mengarah ke halaman pengerjaan
+                                buttonsHtml = `
+                                <a href="/classes/${classId}/tasks/${task.id}/answer" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-pen-square me-1"></i> Kerjakan
+                                </a>`;
+                            } else {
+                                // Jika tidak punya izin, tampilkan tombol terkunci atau kosong
+                                buttonsHtml = `
+                                <button class="btn btn-sm btn-secondary" disabled>
+                                    <i class="fas fa-lock"></i>
+                                </button>`;
+                            }
+
+                            // 4. Render HTML
                             $container.append(`
-                        <div class="col-md-6 mb-3">
-                            <div class="card task-card shadow-sm h-100 border-start border-4 border-${badgeColor}">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-2">
-                                        <h6 class="font-weight-bold text-dark mb-0">${task.title}</h6>
-                                        <span class="badge bg-${badgeColor}">${task.type ? task.type.toUpperCase() : 'TASK'}</span>
-                                    </div>
-                                    <p class="small text-muted mb-2">
-                                        <i class="fas fa-book me-1"></i> ${subjectName}
-                                    </p>
-                                    <div class="d-flex justify-content-between align-items-center mt-3">
-                                        <span class="small text-danger">Deadline: ${task.end_time ? task.end_time.substring(0,10) : '-'}</span>
-                                        <a href="/classes/${classId}/tasks/${task.id}/student-view" class="btn btn-sm btn-primary">Buka</a>
+                            <div class="col-md-6 mb-3">
+                                <div class="card task-card shadow-sm h-100 border-start border-4 border-${badgeColor}">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="font-weight-bold text-dark mb-0">${task.title}</h6>
+                                            <span class="badge bg-${badgeColor}">${task.type ? task.type.toUpperCase() : 'TASK'}</span>
+                                        </div>
+                                        <p class="small text-muted mb-2">
+                                            <i class="fas fa-book me-1"></i> ${subjectName}
+                                        </p>
+                                        <div class="d-flex justify-content-between align-items-center mt-3">
+                                            <span class="small text-danger">Deadline: ${task.end_time ? task.end_time.substring(0,10) : '-'}</span>
+                                            ${buttonsHtml}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    `);
+                        `);
                         });
                     });
             }
