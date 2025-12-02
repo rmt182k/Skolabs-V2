@@ -95,6 +95,7 @@
         window.globalAuthUser = @json($globalAuthUser);
         window.globalRoles = @json($globalRoles);
         window.globalPermissions = @json($globalPermissions);
+        window.globalPermissionsByMenu = @json($globalPermissionsByMenu);
     </script>
 
     <!-- Vendor js -->

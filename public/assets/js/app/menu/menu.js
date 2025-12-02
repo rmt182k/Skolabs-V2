@@ -220,7 +220,7 @@ $(document).ready(function () {
         const container = $('#role-permissions-content');
         let permissionHeaders = '';
         availablePermissions.forEach(p => {
-            permissionHeaders += `<th class="text-center text-capitalize">${p.name}</th>`;
+            permissionHeaders += `<th class="text-center">${p.display_name}</th>`;
         });
 
         let roleRows = '';
