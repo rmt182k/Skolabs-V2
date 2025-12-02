@@ -38,7 +38,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // DASHBOARD
     // ==========================================
     Route::get('/dashboard', [DashboardController::class, 'index']);
-    Route::get('/user-credentials', [DashboardController::class, 'getUserCredentials']);
 
     // ==========================================
     // PERMISSION MANAGEMENT API

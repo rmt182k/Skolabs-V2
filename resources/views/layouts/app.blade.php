@@ -92,6 +92,12 @@
     <!-- Theme Settings -->
     @include('layouts.components.theme-settings')
 
+    <script>
+        window.globalAuthUser = @json($globalAuthUser);
+        window.globalRoles = @json($globalRoles);
+        window.globalPermissions = @json($globalPermissions);
+    </script>
+
     <!-- Vendor js -->
     <script src="{{ asset('assets/js/vendor.min.js') }}"></script>
 
@@ -114,8 +120,7 @@
     <!-- Analytics Dashboard App js -->
     <script src="{{ asset('assets/js/pages/demo.dashboard-analytics.js') }}"></script>
 
-
-
+    <!-- Sweet Alerts js -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- Code Highlight js -->
@@ -143,29 +148,6 @@
     <script src="{{ asset('assets/vendor/datatables/dataTables.fixedHeader.min.js') }}"></script>
     <script src="{{ asset('assets/js/app/utils/sidebar.js') }}"></script>
     @stack('scripts')
-    <script>
-        window.userData = null;
-
-        document.addEventListener('DOMContentLoaded', function() {
-
-            fetch("/user-credentials")
-                .then(response => response.json())
-                .then(res => {
-                    if (res.success) {
-                        window.userData = res.data;
-
-                        console.log("Data berhasil disimpan ke Global:", window.userData);
-                    } else {
-                        console.warn("Gagal mengambil data:", res.message);
-                    }
-                })
-                .catch(error => {
-                    console.error("Terjadi kesalahan sistem:", error);
-                });
-
-        });
-    </script>
-
 </body>
 
 </html>

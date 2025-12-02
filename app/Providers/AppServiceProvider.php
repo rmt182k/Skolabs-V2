@@ -22,82 +22,107 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        View::composer('layouts.app', function ($view) {
-            $user = Auth::user();
-            $permissions = [];
-            $studentClasses = []; // Default kosong
-            $teacherClasses = []; // Default kosong
+        // Gunakan '*' agar variabel masuk ke semua Layout DAN Child View
+        View::composer('*', function ($view) {
 
-            if ($user) {
-                // ====================================================
-                // 1. PERMISSION LOGIC (EXISTING)
-                // ====================================================
-                $roleIds = DB::table('user_roles')->where('user_id', $user->id)->pluck('role_id');
+            static $globalData = null;
 
-                $rolePerms = DB::table('role_menu_permissions')
-                    ->join('permissions', 'role_menu_permissions.permission_id', '=', 'permissions.id')
-                    ->whereIn('role_menu_permissions.role_id', $roleIds)
-                    ->pluck('permissions.name')
-                    ->toArray();
+            if ($globalData === null) {
+                $user = Auth::user();
 
-                $overrides = DB::table('user_menu_permission_overrides')
-                    ->join('permissions', 'user_menu_permission_overrides.permission_id', '=', 'permissions.id')
-                    ->where('user_id', $user->id)
-                    ->select('permissions.name', 'user_menu_permission_overrides.access_type')
-                    ->get();
+                // Default values
+                $roles = collect([]); // Default collection kosong
+                $permissions = [];
+                $studentClasses = [];
+                $teacherClasses = [];
 
-                $permissions = array_unique($rolePerms);
+                if ($user) {
+                    // --- 1. ROLE & PERMISSION LOGIC ---
 
-                foreach ($overrides as $override) {
-                    if ($override->access_type === 'grant') {
-                        if (!in_array($override->name, $permissions)) {
-                            $permissions[] = $override->name;
+                    // [BARU] Ambil Data Role Lengkap (Join user_roles -> roles)
+                    $roles = DB::table('user_roles')
+                        ->join('roles', 'user_roles.role_id', '=', 'roles.id')
+                        ->where('user_roles.user_id', $user->id)
+                        ->select(
+                            'roles.id',
+                            'roles.name',           // ex: admin, teacher
+                            'roles.display_name',   // ex: Administrator, Guru
+                            'roles.badge_color',    // ex: primary, danger
+                            'roles.description'
+                        )
+                        ->get();
+
+                    // Ambil ID dari hasil query roles di atas untuk dipakai query permission
+                    // (Menghemat satu query ke database)
+                    $roleIds = $roles->pluck('id')->toArray();
+
+                    // Logic Permission (Sama seperti sebelumnya, tapi pakai $roleIds dari variabel di atas)
+                    $rolePerms = DB::table('role_menu_permissions')
+                        ->join('permissions', 'role_menu_permissions.permission_id', '=', 'permissions.id')
+                        ->whereIn('role_menu_permissions.role_id', $roleIds)
+                        ->distinct()
+                        ->pluck('permissions.name')
+                        ->toArray();
+
+                    $overrides = DB::table('user_menu_permission_overrides')
+                        ->join('permissions', 'user_menu_permission_overrides.permission_id', '=', 'permissions.id')
+                        ->where('user_menu_permission_overrides.user_id', $user->id)
+                        ->select('permissions.name', 'user_menu_permission_overrides.access_type')
+                        ->get();
+
+                    $permissions = array_unique($rolePerms);
+
+                    foreach ($overrides as $override) {
+                        if ($override->access_type === 'grant') {
+                            if (!in_array($override->name, $permissions)) {
+                                $permissions[] = $override->name;
+                            }
+                        } elseif ($override->access_type === 'revoke') {
+                            $permissions = array_diff($permissions, [$override->name]);
                         }
-                    } elseif ($override->access_type === 'revoke') {
-                        $permissions = array_diff($permissions, [$override->name]);
+                    }
+
+                    // --- 2. ACADEMIC LOGIC (Sama seperti sebelumnya) ---
+                    $activeYearId = DB::table('academic_years')->where('is_active', true)->value('id');
+
+                    if ($activeYearId) {
+                        // Student Logic
+                        $studentClasses = DB::table('class_enrollments')
+                            ->join('classes', 'class_enrollments.class_id', '=', 'classes.id')
+                            ->where('class_enrollments.student_id', $user->id)
+                            ->where('class_enrollments.academic_year_id', $activeYearId)
+                            ->select('classes.id', 'classes.name', 'classes.grade_level', 'classes.suffix')
+                            ->orderBy('classes.name')
+                            ->get();
+
+                        // Teacher Logic
+                        $teacherClasses = DB::table('class_schedules')
+                            ->join('classes', 'class_schedules.class_id', '=', 'classes.id')
+                            ->where('class_schedules.user_id', $user->id)
+                            ->where('classes.academic_year_id', $activeYearId)
+                            ->select('classes.id', 'classes.name', 'classes.grade_level', 'classes.suffix')
+                            ->distinct()
+                            ->orderBy('classes.name')
+                            ->get();
                     }
                 }
 
-                // ====================================================
-                // 2. ACADEMIC & CLASS LOGIC (NEW)
-                // ====================================================
-
-                // Ambil Tahun Ajaran Aktif (PENTING: Agar tidak muncul kelas tahun lalu)
-                $activeYearId = DB::table('academic_years')->where('is_active', true)->value('id');
-
-                if ($activeYearId) {
-                    // A. JIKA STUDENT: Ambil dari class_enrollments
-                    // Logic: Cek apakah user ID ini terdaftar di enrollment pada tahun ajar aktif
-                    $studentClasses = DB::table('class_enrollments')
-                        ->join('classes', 'class_enrollments.class_id', '=', 'classes.id')
-                        ->where('class_enrollments.student_id', $user->id)
-                        ->where('class_enrollments.academic_year_id', $activeYearId)
-                        ->select('classes.id', 'classes.name', 'classes.grade_level')
-                        ->orderBy('classes.name')
-                        ->get();
-
-                    // B. JIKA TEACHER: Ambil dari class_schedules
-                    // Logic: Cek apakah user ID ini punya jadwal mengajar di kelas yang tahun ajarnya aktif
-                    $teacherClasses = DB::table('class_schedules')
-                        ->join('classes', 'class_schedules.class_id', '=', 'classes.id')
-                        ->where('class_schedules.user_id', $user->id)
-                        ->where('classes.academic_year_id', $activeYearId) // Filter via relasi classes ke academic_years
-                        ->select('classes.id', 'classes.name', 'classes.grade_level')
-                        ->distinct() // PENTING: Agar kelas tidak duplikat jika guru mengajar mapel berbeda di kelas sama
-                        ->orderBy('classes.name')
-                        ->get();
-                }
+                // Simpan ke static variable
+                $globalData = [
+                    'user' => $user,
+                    'roles' => $roles, // Data Role masuk sini
+                    'permissions' => array_values($permissions),
+                    'studentClasses' => $studentClasses,
+                    'teacherClasses' => $teacherClasses
+                ];
             }
 
-            // ====================================================
-            // 3. INJECT KE VIEW
-            // ====================================================
-            $view->with('globalAuthUser', $user);
-            $view->with('globalPermissions', array_values($permissions));
-
-            // Variable Baru: Bisa dipakai di Navbar/Sidebar/JS
-            $view->with('globalStudentClasses', $studentClasses);
-            $view->with('globalTeacherClasses', $teacherClasses);
+            // --- 3. INJECT KE VIEW ---
+            $view->with('globalAuthUser', $globalData['user']);
+            $view->with('globalRoles', $globalData['roles']); // Inject variabel baru
+            $view->with('globalPermissions', $globalData['permissions']);
+            $view->with('globalStudentClasses', $globalData['studentClasses']);
+            $view->with('globalTeacherClasses', $globalData['teacherClasses']);
         });
     }
 }
