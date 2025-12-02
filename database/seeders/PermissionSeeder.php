@@ -64,6 +64,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'edit_assignment',   'display_name' => 'Edit Assignment',   'description' => 'Dapat mengedit instruksi tugas.'],
             ['name' => 'delete_assignment', 'display_name' => 'Delete Assignment', 'description' => 'Dapat menghapus tugas.'],
             ['name' => 'view_assignment',   'display_name' => 'View Assignment',   'description' => 'Dapat melihat detail tugas.'],
+            ['name' => 'view_submissions',  'display_name' => 'View Submissions',  'description' => 'Dapat melihat daftar seluruh tugas yang sudah dikumpulkan siswa.'],
 
             // --- Mengerjakan Tugas (Student Context) ---
             ['name' => 'submit_assignment', 'display_name' => 'Submit Assignment', 'description' => 'Dapat mengirimkan jawaban tugas.'],

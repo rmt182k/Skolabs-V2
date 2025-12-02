@@ -167,8 +167,8 @@ $(document).ready(function () {
             }
 
             // 2. Permission Guru: grade_assignment
-            if (can('grade_assignment')) {
-                buttonsHtml += `<a href="/classes/${CLASS_ID}/tasks/${task.id}/submissions" class="btn btn-sm btn-outline-secondary me-1"><i class="fas fa-clipboard-check"></i> Hasil</a>`;
+            if (can('view_submissions')) {
+                buttonsHtml += `<a href="/classes/${CLASS_ID}/tasks/${task.id}/submissions" class="btn btn-sm btn-outline-secondary me-1"><i class="fas fa-clipboard-check"></i> View Submission</a>`;
             }
 
             // 3. Permission Edit: edit_assignment
