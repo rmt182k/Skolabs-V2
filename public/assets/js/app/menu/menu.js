@@ -292,15 +292,11 @@ $(document).ready(function () {
 
         let permissionOverrideRows = '';
         permissionOverrides.forEach(o => {
-            const accessTypeBadge = o.access_type === 'grant'
-                ? '<span class="badge bg-success">Grant</span>'
-                : '<span class="badge bg-danger">Revoke</span>';
-
             permissionOverrideRows += `
                 <tr>
                     <td>${o.user_name}</td>
                     <td>${o.permission_name}</td>
-                    <td>${accessTypeBadge}</td>
+                    <td>${o.type === 'grant' ? '<span class="badge bg-success">Grant</span>' : '<span class="badge bg-danger">Revoke</span>'}</td>
                     <td><button class="btn btn-sm btn-outline-danger delete-user-permission-override-btn" data-override-id="${o.id}"><i class="fas fa-trash"></i></button></td>
                 </tr>`;
         });
