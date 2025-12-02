@@ -227,21 +227,25 @@ $(document).ready(function () {
         allRoles.forEach(role => {
             const hasAccess = rolesWithAccess.includes(role.id);
             const permissions = assignedPermissions.find(x => x.role_id === role.id)?.permissions || [];
-            const isDisabled = !hasAccess ? 'disabled' : '';
+
+            // --- PERBAIKAN 1: HAPUS VARIABLE isDisabled ---
+            // Kita ingin checkbox selalu aktif.
 
             let permissionCells = '';
             availablePermissions.forEach(perm => {
-                const isChecked = hasAccess && permissions.includes(perm.name) ? 'checked' : '';
+                const isChecked = permissions.includes(perm.name) ? 'checked' : '';
+
+                // --- PERBAIKAN 2: HAPUS PROPERTI ${isDisabled} DARI INPUT ---
                 permissionCells += `
                     <td class="text-center">
                         <div class="form-check d-inline-block">
-                            <input class="form-check-input permission-checkbox" type="checkbox" value="${perm.name}" ${isChecked} ${isDisabled}>
+                            <input class="form-check-input permission-checkbox" type="checkbox" value="${perm.name}" ${isChecked}>
                         </div>
                     </td>`;
             });
 
             roleRows += `
-                <tr class="role-permission-row ${!hasAccess ? 'row-disabled' : ''}" data-role-id="${role.id}">
+                <tr class="role-permission-row" data-role-id="${role.id}">
                     <td class="text-center">
                         <div class="form-check d-inline-block">
                             <input class="form-check-input role-access-checkbox" type="checkbox" ${hasAccess ? 'checked' : ''}>
@@ -252,10 +256,11 @@ $(document).ready(function () {
                 </tr>`;
         });
 
+        // ... (Sisa kode HTML table sama seperti sebelumnya) ...
         const tableHtml = `
             <div class="mb-3">
                 <h6 class="fw-bold"><i class="${menu.icon || 'fas fa-circle'} me-2"></i>${menu.title}</h6>
-                <p class="text-muted small mb-0">Check "Access" to enable a role for this menu, then define its permissions.</p>
+                <p class="text-muted small mb-0">You can check permissions independently from Access (Sidebar Visibility).</p>
             </div>
             <div class="table-responsive">
                 <table class="table table-bordered table-hover">
@@ -419,17 +424,17 @@ $(document).ready(function () {
         loadAccessDetails(selectedMenuId);
     });
 
-    $(document).on('change', '.role-access-checkbox', function () {
-        const row = $(this).closest('tr');
-        const permissionCheckboxes = row.find('.permission-checkbox');
-        if (this.checked) {
-            row.removeClass('row-disabled');
-            permissionCheckboxes.prop('disabled', false);
-        } else {
-            row.addClass('row-disabled');
-            permissionCheckboxes.prop('disabled', true).prop('checked', false);
-        }
-    });
+    // $(document).on('change', '.role-access-checkbox', function () {
+    //     const row = $(this).closest('tr');
+    //     const permissionCheckboxes = row.find('.permission-checkbox');
+    //     if (this.checked) {
+    //         row.removeClass('row-disabled');
+    //         permissionCheckboxes.prop('disabled', false);
+    //     } else {
+    //         row.addClass('row-disabled');
+    //         permissionCheckboxes.prop('disabled', true).prop('checked', false);
+    //     }
+    // });
 
     $(document).on('click', '#save-role-permissions-btn', handleSaveAccessAndPermissions);
     $(document).on('click', '#add-user-menu-override-btn', handleAddUserMenuOverride);
@@ -520,14 +525,27 @@ $(document).ready(function () {
     function handleSaveAccessAndPermissions() {
         const button = $('#save-role-permissions-btn');
         const originalHtml = button.html();
+
+        // Array 1: Murni untuk Access (Sidebar Visibility)
         const rolesWithAccess = [];
+
+        // Array 2: Murni untuk Permission (Functionality)
         const permissionsByRole = [];
 
         $('.role-permission-row').each(function () {
             const roleId = $(this).data('role-id');
-            if ($(this).find('.role-access-checkbox').is(':checked')) {
+            const row = $(this);
+
+            // 1. Ambil status Access (User Record)
+            if (row.find('.role-access-checkbox').is(':checked')) {
                 rolesWithAccess.push(roleId);
-                const permissions = $(this).find('.permission-checkbox:checked').map((_, el) => $(el).val()).get();
+            }
+
+            // 2. Ambil status Permission (Functionality)
+            // Permission tetap diambil walaupun Access di atas FALSE/Tidak dicentang
+            const permissions = row.find('.permission-checkbox:checked').map((_, el) => $(el).val()).get();
+
+            if (permissions.length > 0) {
                 permissionsByRole.push({
                     role_id: roleId,
                     permissions: permissions
@@ -548,6 +566,7 @@ $(document).ready(function () {
             .done(res => {
                 alert(res.message);
                 setButtonState(button, 'Saved!', 'btn-success', 'fa-check-circle');
+                loadAccessDetails(selectedMenuId);
             })
             .fail(xhr => {
                 handleError(xhr);

@@ -334,24 +334,39 @@ class MenuController extends Controller
                 'permissions_by_role.*.role_id' => 'required|integer|exists:roles,id',
                 'permissions_by_role.*.permissions' => 'present|array'
             ]);
+
+            // Cache ID permission agar query lebih cepat (tidak query berulang di loop)
             $validPermissionsMap = DB::table('permissions')->pluck('id', 'name');
 
             DB::beginTransaction();
-            // 1. Update `role_menus`
-            DB::table('role_menus')->where('menu_id', $menuId)->delete();
-            $roleMenuInserts = array_map(fn($roleId) => [
-                'role_id' => $roleId,
-                'menu_id' => $menuId,
-                'created_at' => now(),
-                'updated_at' => now()
-            ], $validated['roles_with_access']);
-            if (!empty($roleMenuInserts))
-                DB::table('role_menus')->insert($roleMenuInserts);
 
-            // 2. Update `role_menu_permissions` (nama tabel baru)
+            // 1. UPDATE SIDEBAR ACCESS (Tabel role_menus)
+            // Hapus data lama
+            DB::table('role_menus')->where('menu_id', $menuId)->delete();
+
+            // Insert data baru (Hanya Role yang dicentang Access-nya)
+            $roleMenuInserts = [];
+            foreach ($validated['roles_with_access'] as $roleId) {
+                $roleMenuInserts[] = [
+                    'role_id' => $roleId,
+                    'menu_id' => $menuId,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ];
+            }
+            if (!empty($roleMenuInserts)) {
+                DB::table('role_menus')->insert($roleMenuInserts);
+            }
+
+            // 2. UPDATE FUNCTIONAL PERMISSIONS (Tabel role_menu_permissions)
+            // Hapus data lama
             DB::table('role_menu_permissions')->where('menu_id', $menuId)->delete();
+
             $permissionInserts = [];
             foreach ($validated['permissions_by_role'] as $roleData) {
+                // Di sini kita TIDAK mengecek apakah role ini ada di $roles_with_access.
+                // Kita terima apa adanya sesuai request user.
+
                 foreach ($roleData['permissions'] as $permissionName) {
                     if (isset($validPermissionsMap[$permissionName])) {
                         $permissionInserts[] = [
@@ -364,8 +379,10 @@ class MenuController extends Controller
                     }
                 }
             }
-            if (!empty($permissionInserts))
+
+            if (!empty($permissionInserts)) {
                 DB::table('role_menu_permissions')->insert($permissionInserts);
+            }
 
             DB::commit();
             return response()->json(['success' => true, 'message' => 'Role access and permissions updated successfully.']);
@@ -700,7 +717,7 @@ class MenuController extends Controller
         if (!is_array($menuArray))
             return [];
 
-        usort($menuArray, fn ($a, $b) => $a->order <=> $b->order);
+        usort($menuArray, fn($a, $b) => $a->order <=> $b->order);
         foreach ($menuArray as $item) {
             if (isset($item->children) && is_array($item->children) && !empty($item->children)) {
                 $item->children = $this->sortChildrenRecursive($item->children);
