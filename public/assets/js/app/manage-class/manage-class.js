@@ -12,7 +12,7 @@ $(document).ready(function () {
         return MY_PERMISSIONS.includes(permissionName);
     }
 
-    // ========================================================================
+    // ================================================create-task-btn========================
     // 2. KONFIGURASI & VARIABEL UTAMA
     // ========================================================================
     $.ajaxSetup({
@@ -27,8 +27,8 @@ $(document).ready(function () {
 
         if (!window.globalAuthUser) return urlId;
 
-        const roleName = window.globalAuthUser.role ? window.globalAuthUser.role.name : '';
-        const studentClassId = window.globalAuthUser.class ? window.globalAuthUser.class.id : null;
+        const roleName = window.globalRoles[0] ? window.globalRoles[0].name : '';
+        const studentClassId = window.globalStudentClasses[0].id ? window.globalStudentClasses[0].id : null;
 
         if (roleName === 'student') {
             return studentClassId;
