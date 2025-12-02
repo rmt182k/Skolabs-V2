@@ -14,18 +14,18 @@ $(document).ready(function () {
         const pathParts = window.location.pathname.split('/').filter(Boolean);
         let urlId = pathParts.pop();
 
-        // 2. Cek apakah global variable userData sudah ada
+        // 2. Cek apakah global variable globalAuthUser sudah ada
         // Jika belum ada (null), kembalikan urlId saja agar tidak error
-        if (!window.userData) {
-            console.warn("userData belum siap, menggunakan ID dari URL.");
+        if (!window.globalAuthUser) {
+            console.warn("globalAuthUser belum siap, menggunakan ID dari URL.");
             return urlId;
         }
 
         // 3. Akses data menggunakan struktur BARU
-        // userData.role adalah object { id, name }
-        // userData.class adalah object { id, name } atau null
-        const roleName = window.userData.role ? window.userData.role.name : '';
-        const studentClassId = window.userData.class ? window.userData.class.id : null;
+        // globalAuthUser.role adalah object { id, name }
+        // globalAuthUser.class adalah object { id, name } atau null
+        const roleName = window.globalAuthUser.role ? window.globalAuthUser.role.name : '';
+        const studentClassId = window.globalAuthUser.class ? window.globalAuthUser.class.id : null;
 
         // 4. Logika Override
         if (roleName === 'student') {
@@ -178,7 +178,7 @@ $(document).ready(function () {
         let resultPermissions = [];
 
         $.ajax({
-            url: `/api/permissions/${window.userData.id}`,
+            url: `/api/permissions/${window.globalAuthUser.id}`,
             method: 'GET',
             async: false,
             dataType: 'json',
