@@ -158,7 +158,7 @@ $(document).ready(function () {
             let buttonsHtml = '';
 
             // 1. Permission Siswa: submit_assignment
-            if (can('submit_assignment')) {
+            if (can('view_assignment')) {
                 const isClosed = status === 'Ditutup' || isExpired;
                 const btnClass = isClosed ? 'btn-secondary disabled' : 'btn-success';
                 const btnUrl = isClosed ? 'javascript:void(0)' : `/classes/${CLASS_ID}/tasks/${task.id}/answer`;
