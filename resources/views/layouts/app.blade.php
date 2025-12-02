@@ -49,6 +49,7 @@
     @stack('styles')
 </head>
 <body>
+    {{-- @dd($globalStudentClasses) --}}
     <!-- Begin page -->
     <div class="wrapper">
 
@@ -96,6 +97,7 @@
         window.globalRoles = @json($globalRoles);
         window.globalPermissions = @json($globalPermissions);
         window.globalPermissionsByMenu = @json($globalPermissionsByMenu);
+        window.globalStudentClasses = @json($globalStudentClasses);
     </script>
 
     <!-- Vendor js -->
