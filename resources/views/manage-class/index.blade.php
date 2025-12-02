@@ -7,10 +7,10 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
     <link rel="stylesheet" href="{{ asset('assets/css/manage-class/manage-class.css') }}">
 @endpush
-
 @section('content')
     <div class="container-fluid">
         {{-- Breadcrumb --}}
@@ -24,8 +24,10 @@
                     Kelola Kelas: <span class="fw-bold text-dark">{{ $class->name ?? 'Nama Kelas' }}</span>
                 </h5>
                 <div class="mt-2 text-muted small">
-                    <span class="me-3"><i class="fas fa-user-tie me-1"></i> Wali Kelas: <strong>{{ $class->homeroomTeacher->name ?? 'Belum Ditentukan' }}</strong></span>
-                    <span><i class="fas fa-user-friends me-1"></i> Jumlah Siswa: <strong id="student-count">...</strong></span>
+                    <span class="me-3"><i class="fas fa-user-tie me-1"></i> Wali Kelas:
+                        <strong>{{ $class->homeroomTeacher->name ?? 'Belum Ditentukan' }}</strong></span>
+                    <span><i class="fas fa-user-friends me-1"></i> Jumlah Siswa: <strong
+                            id="student-count">...</strong></span>
                 </div>
             </div>
         </div>
@@ -56,4 +58,3 @@
     {{-- Load file JS utama --}}
     <script src="{{ asset('assets/js/app/manage-class/manage-class.js') }}"></script>
 @endpush
-

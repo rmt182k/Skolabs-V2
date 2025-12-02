@@ -48,7 +48,6 @@
 
     @stack('styles')
 </head>
-
 <body>
     <!-- Begin page -->
     <div class="wrapper">

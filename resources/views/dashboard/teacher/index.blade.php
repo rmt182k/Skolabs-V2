@@ -2,7 +2,6 @@
     File: resources/views/dashboard/teacher/index.blade.php
     Description: Dashboard utama untuk role Teacher
 --}}
-
 <div class="row">
     <div class="col-12">
 
@@ -137,9 +136,6 @@
 @endpush
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
     <script>
         $(document).ready(function() {
             // Setup CSRF
@@ -151,9 +147,10 @@
 
             // API Endpoints
             const API = {
-                CLASSES: '/api/classes/fetchUserClasses/{{ $userCredentials['id'] }}',
-                MY_SUBJECTS: '/api/subjects-assignments/{{ $userCredentials['id'] }}' // Pastikan route ini aktif
+                CLASSES: `/api/classes/fetchUserClasses/${window.globalAuthUser.id}`,
+                MY_SUBJECTS: `/api/subjects-assignments/${window.globalAuthUser.id}` // Pastikan route ini aktif
             };
+
 
             /**
              * 1. Load Data Kelas (Tabel)
@@ -282,7 +279,7 @@
                         console.error("Error loading subjects:", xhr);
                         $subjectList.html(
                             '<div class="col-12 text-danger text-center">Gagal memuat mata pelajaran.</div>'
-                            );
+                        );
                         $statCounter.text('Error');
                     });
             }

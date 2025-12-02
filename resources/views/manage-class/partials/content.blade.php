@@ -1,3 +1,12 @@
+{{--
+    SETUP VARIABLE KHUSUS HALAMAN INI
+    Ambil permission hanya untuk menu 'Class'
+--}}
+@php
+    // GANTI 'Class' SESUAI DENGAN KOLOM 'title' DI TABEL 'menus' DATABASE KAMU
+    $pagePermissions = $globalPermissionsByMenu['Class'] ?? [];
+@endphp
+
 <div class="card shadow-sm">
     {{-- Navigasi Tab --}}
     <div class="card-header card-header-tab">
@@ -43,9 +52,13 @@
             <div class="tab-pane fade show active" id="schedule" role="tabpanel" aria-labelledby="schedule-tab-btn">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0 text-dark">Weekly Class Schedule</h6>
-                    <button class="btn btn-primary btn-sm" id="add-schedule-btn">
-                        <i class="fas fa-plus me-1"></i> Add Schedule Entry
-                    </button>
+
+                    {{-- CEK PERMISSION: create_schedule (Pake variable $pagePermissions) --}}
+                    @if (in_array('create_schedule', $pagePermissions))
+                        <button class="btn btn-primary btn-sm" id="add-schedule-btn">
+                            <i class="fas fa-plus me-1"></i> Create Schedule
+                        </button>
+                    @endif
                 </div>
                 <div id="schedule-loading">
                     <i class="fas fa-spinner fa-spin me-2"></i>
@@ -61,10 +74,14 @@
             <div class="tab-pane fade" id="materials" role="tabpanel" aria-labelledby="materials-tab-btn">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0 text-dark">Daftar Bahan Ajar</h6>
-                    <button class="btn btn-primary btn-sm" id="add-material-btn" data-bs-toggle="modal"
-                        data-bs-target="#materialModal">
-                        <i class="fas fa-plus me-1"></i> Tambah Bahan Ajar
-                    </button>
+
+                    {{-- CEK PERMISSION: create_material --}}
+                    @if (in_array('create_material', $pagePermissions))
+                        <button class="btn btn-primary btn-sm" id="add-material-btn" data-bs-toggle="modal"
+                            data-bs-target="#materialModal">
+                            <i class="fas fa-plus me-1"></i> Create Material
+                        </button>
+                    @endif
                 </div>
                 <div id="materials-loading">
                     <i class="fas fa-spinner fa-spin me-2"></i>
@@ -76,14 +93,17 @@
                 </div>
             </div>
 
-            {{-- ================= TAB TUGAS & UJIAN (BARU) ================= --}}
+            {{-- ================= TAB TUGAS & UJIAN ================= --}}
             <div class="tab-pane fade" id="assignments" role="tabpanel" aria-labelledby="assignments-tab-btn">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0 text-dark">Daftar Tugas & Ujian</h6>
-                    {{-- ⭐ INI DIA PERUBAHANNYA: <a> diubah jadi <button> --}}
-                    <button id="create-task-btn" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus me-1"></i> Buat Tugas Baru
-                    </button>
+
+                    {{-- CEK PERMISSION: create_assignment --}}
+                    @if (in_array('create_assignment', $pagePermissions))
+                        <button id="create-task-btn" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i> Create Assignment
+                        </button>
+                    @endif
                 </div>
 
                 <div id="tasks-loading">
@@ -110,10 +130,14 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h6 class="mb-0 text-dark">Daftar Siswa Terdaftar (<span id="student-count-table">...</span>
                         Siswa)</h6>
-                    <button class="btn btn-primary btn-sm" id="add-student-btn" data-bs-toggle="modal"
-                        data-bs-target="#studentModal">
-                        <i class="fas fa-user-plus me-1"></i> Tambah Siswa
-                    </button>
+
+                    {{-- CEK PERMISSION: enroll_student --}}
+                    @if (in_array('enroll_student', $pagePermissions))
+                        <button class="btn btn-primary btn-sm" id="add-student-btn" data-bs-toggle="modal"
+                            data-bs-target="#studentModal">
+                            <i class="fas fa-user-plus me-1"></i> Enroll Student
+                        </button>
+                    @endif
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover table-bordered" id="students-table" style="width:100%">

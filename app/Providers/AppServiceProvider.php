@@ -22,7 +22,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Gunakan '*' agar variabel masuk ke semua Layout DAN Child View
         View::composer('*', function ($view) {
 
             static $globalData = null;
@@ -31,58 +30,68 @@ class AppServiceProvider extends ServiceProvider
                 $user = Auth::user();
 
                 // Default values
-                $roles = collect([]); // Default collection kosong
-                $permissions = [];
+                $roles = collect([]);
+                $permissions = []; // Array Flat (['perm-a', 'perm-b']) untuk logic check
+                $permissionsByMenu = []; // Array Group (['Menu A' => ['perm-a']]) untuk display
                 $studentClasses = [];
                 $teacherClasses = [];
 
                 if ($user) {
-                    // --- 1. ROLE & PERMISSION LOGIC ---
-
-                    // [BARU] Ambil Data Role Lengkap (Join user_roles -> roles)
+                    // --- 1. ROLE LOGIC ---
                     $roles = DB::table('user_roles')
                         ->join('roles', 'user_roles.role_id', '=', 'roles.id')
                         ->where('user_roles.user_id', $user->id)
-                        ->select(
-                            'roles.id',
-                            'roles.name',           // ex: admin, teacher
-                            'roles.display_name',   // ex: Administrator, Guru
-                            'roles.badge_color',    // ex: primary, danger
-                            'roles.description'
-                        )
+                        ->select('roles.id', 'roles.name', 'roles.display_name', 'roles.badge_color', 'roles.description')
                         ->get();
 
-                    // Ambil ID dari hasil query roles di atas untuk dipakai query permission
-                    // (Menghemat satu query ke database)
                     $roleIds = $roles->pluck('id')->toArray();
 
-                    // Logic Permission (Sama seperti sebelumnya, tapi pakai $roleIds dari variabel di atas)
-                    $rolePerms = DB::table('role_menu_permissions')
-                        ->join('permissions', 'role_menu_permissions.permission_id', '=', 'permissions.id')
-                        ->whereIn('role_menu_permissions.role_id', $roleIds)
-                        ->distinct()
-                        ->pluck('permissions.name')
-                        ->toArray();
+                    // --- 2. PERMISSION LOGIC (UPDATED WITH MENU) ---
 
+                    // Kita ambil data Permission SEKALIGUS nama Menunya
+                    $rawRolePerms = DB::table('role_menu_permissions')
+                        ->join('permissions', 'role_menu_permissions.permission_id', '=', 'permissions.id')
+                        ->join('menus', 'role_menu_permissions.menu_id', '=', 'menus.id')
+                        ->whereIn('role_menu_permissions.role_id', $roleIds)
+                        ->select(
+                            'permissions.name as permission_name',
+                            'menus.title as menu_name'
+                        )
+                        ->distinct()
+                        ->get();
+
+                    // A. Buat Flat Array (Untuk Logic Coding: in_array, dll)
+                    $rolePermsFlat = $rawRolePerms->pluck('permission_name')->toArray();
+                    $permissions = array_unique($rolePermsFlat);
+
+                    // B. Buat Grouped Array (Untuk Tampilan: Menu A punya permission apa aja)
+                    $permissionsByMenu = $rawRolePerms->groupBy('menu_name')->map(function ($item) {
+                        return $item->pluck('permission_name')->toArray();
+                    })->toArray();
+
+                    // --- OVERRIDES LOGIC ---
                     $overrides = DB::table('user_menu_permission_overrides')
                         ->join('permissions', 'user_menu_permission_overrides.permission_id', '=', 'permissions.id')
                         ->where('user_menu_permission_overrides.user_id', $user->id)
                         ->select('permissions.name', 'user_menu_permission_overrides.access_type')
                         ->get();
 
-                    $permissions = array_unique($rolePerms);
-
                     foreach ($overrides as $override) {
                         if ($override->access_type === 'grant') {
                             if (!in_array($override->name, $permissions)) {
                                 $permissions[] = $override->name;
+                                // Note: Override Grant biasanya tidak punya info menu ID di tabel override,
+                                // jadi masuk ke kategori 'Custom/Override' atau biarkan di flat array saja.
+                                $permissionsByMenu['Extra Privileges'][] = $override->name;
                             }
                         } elseif ($override->access_type === 'revoke') {
                             $permissions = array_diff($permissions, [$override->name]);
+                            // Kita tidak menghapus dari $permissionsByMenu agar tetap terlihat strukturnya,
+                            // tapi secara logic sistem ($permissions flat), aksesnya sudah hilang.
                         }
                     }
 
-                    // --- 2. ACADEMIC LOGIC (Sama seperti sebelumnya) ---
+                    // --- 3. ACADEMIC LOGIC ---
                     $activeYearId = DB::table('academic_years')->where('is_active', true)->value('id');
 
                     if ($activeYearId) {
@@ -110,17 +119,24 @@ class AppServiceProvider extends ServiceProvider
                 // Simpan ke static variable
                 $globalData = [
                     'user' => $user,
-                    'roles' => $roles, // Data Role masuk sini
-                    'permissions' => array_values($permissions),
+                    'roles' => $roles,
+                    'permissions' => array_values($permissions), // Flat Array (Existing)
+                    'permissionsByMenu' => $permissionsByMenu,   // Grouped Array (NEW)
                     'studentClasses' => $studentClasses,
                     'teacherClasses' => $teacherClasses
                 ];
             }
 
-            // --- 3. INJECT KE VIEW ---
+            // --- 4. INJECT KE VIEW ---
             $view->with('globalAuthUser', $globalData['user']);
-            $view->with('globalRoles', $globalData['roles']); // Inject variabel baru
+            $view->with('globalRoles', $globalData['roles']);
+
+            // Ini yang lama (flat array), jangan dihapus biar logic @can tidak error
             $view->with('globalPermissions', $globalData['permissions']);
+
+            // [BARU] Ini yang ada info menunya
+            $view->with('globalPermissionsByMenu', $globalData['permissionsByMenu']);
+
             $view->with('globalStudentClasses', $globalData['studentClasses']);
             $view->with('globalTeacherClasses', $globalData['teacherClasses']);
         });

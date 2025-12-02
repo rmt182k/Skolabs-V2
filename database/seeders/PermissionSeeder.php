@@ -55,7 +55,7 @@ class PermissionSeeder extends Seeder
         // ==========================================
         $lmsPermissions = [
             // --- Materi Pelajaran ---
-            ['name' => 'upload_material', 'display_name' => 'Upload Material', 'description' => 'Dapat mengunggah materi pelajaran (PDF/PPT).'],
+            ['name' => 'create_material', 'display_name' => 'Create Material', 'description' => 'Dapat Mambuat materi pelajaran.'],
             ['name' => 'delete_material', 'display_name' => 'Delete Material', 'description' => 'Dapat menghapus materi pelajaran.'],
             ['name' => 'view_material',   'display_name' => 'View Material',   'description' => 'Dapat mengunduh/melihat materi pelajaran.'],
 
