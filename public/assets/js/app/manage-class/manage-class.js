@@ -21,22 +21,23 @@ $(document).ready(function () {
         }
     });
 
-    function getClassIdFromUrl() {
+    function getClassId() {
         const pathParts = window.location.pathname.split('/').filter(Boolean);
-        let urlId = pathParts.pop();
-
-        if (!window.globalAuthUser) return urlId;
+        let urlId = 0;
 
         const roleName = window.globalRoles[0] ? window.globalRoles[0].name : '';
-        const studentClassId = window.globalStudentClasses[0].id ? window.globalStudentClasses[0].id : null;
 
         if (roleName === 'student') {
+            const studentClassId = window.globalStudentClasses[0].id ? window.globalStudentClasses[0].id : null;
             return studentClassId;
+        } else {
+            urlId = pathParts.pop();
         }
+
         return urlId;
     }
 
-    const CLASS_ID = getClassIdFromUrl();
+    const CLASS_ID = getClassId();
     const STUDENT_ROLE_ID = 3;
 
     // Endpoint API
@@ -169,6 +170,19 @@ $(document).ready(function () {
             // 2. Permission Guru: grade_assignment
             if (can('view_submissions')) {
                 buttonsHtml += `<a href="/classes/${CLASS_ID}/tasks/${task.id}/submissions" class="btn btn-sm btn-outline-secondary me-1"><i class="fas fa-clipboard-check"></i> View Submission</a>`;
+            }
+
+            if (can('view_grades') && task.submission_id) {
+                const gradeUrl = `/classes/${CLASS_ID}/tasks/${task.id}/submissions/${task.submission_id}/grade`;
+                buttonsHtml += `<a href="${gradeUrl}" class="btn btn-sm btn-outline-info me-1">
+                                <i class="fas fa-star me-1"></i> View Grades
+                            </a>`;
+            } else {
+                buttonsHtml += `<a href="javascript:void(0)"
+                                   onclick="alert('Maaf, tombol ini hanya untuk siswa yang sudah mengumpulkan tugas.')"
+                                   class="btn btn-sm btn-outline-secondary me-1">
+                                    <i class="fas fa-star me-1"></i> View Grades
+                                </a>`;
             }
 
             // 3. Permission Edit: edit_assignment
@@ -401,8 +415,19 @@ $(document).ready(function () {
                 entriesHtml = entries.map(e => {
                     // Check Permission sesuai Seeder: edit_schedule & delete_schedule
                     let btns = '';
-                    if (can('edit_schedule')) btns += `<button class="btn btn-sm btn-outline-primary btn-edit-schedule" data-id="${e.id}"><i class="fas fa-pencil-alt"></i></button>`;
-                    if (can('delete_schedule')) btns += `<button class="btn btn-sm btn-outline-danger btn-delete-schedule" data-id="${e.id}"><i class="fas fa-trash"></i></button>`;
+                    // 1. Permission Edit: edit_schedule
+                    if (can('edit_schedule')) {
+                        btns += `<button class="btn btn-sm btn-outline-primary btn-edit-schedule me-1" data-id="${e.id}">
+                            <i class="fas fa-pencil-alt"></i>
+                         </button>`;
+                    }
+
+                    // 2. Permission Delete: delete_schedule
+                    if (can('delete_schedule')) {
+                        btns += `<button class="btn btn-sm btn-outline-danger btn-delete-schedule" data-id="${e.id}">
+                            <i class="fas fa-trash"></i>
+                         </button>`;
+                    }
 
                     return `
                     <div class="schedule-entry">
@@ -556,7 +581,7 @@ $(document).ready(function () {
                         if (can('kick_student')) {
                             return `<button class="btn btn-sm btn-danger btn-delete-student" data-id="${data}" data-name="${row.name}"><i class="fas fa-trash"></i></button>`;
                         }
-                        return '';
+                        return 'No Action';
                     }
                 }
             ]
