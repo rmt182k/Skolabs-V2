@@ -2,8 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -13,16 +11,21 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-        $this->call(class: PermissionSeeder::class);
-        $this->call(class: EducationalLevelSeeder::class);
-        $this->call(class: MajorSeeder::class);
-        $this->call(class: SubjectSeeder::class);
-        $this->call(class: RoleSeeder::class);
-        $this->call(class: MenuSeeder::class);
-        $this->call(class: RoleMenuSeeder::class);
-        $this->call(class: UserSeeder::class);
-        $this->call(class: TeacherSeeder::class);
-        $this->call(class: StudentSeeder::class);
+        // 1. RBAC (Punya Kamu)
+        $this->call(RoleSeeder::class);
+        $this->call(PermissionSeeder::class);
+
+        // 2. Menu (Punya Kamu)
+        $this->call(MenuSeeder::class);
+        $this->call(AdminAccessSeeder::class);
+
+        // 3. Master Data (Baru)
+        $this->call(MasterDataSeeder::class);
+
+        // 4. Users (Admin & Guru) (Baru)
+        $this->call(UserManagementSeeder::class);
+
+        // 5. Classes, Students, Schedules (Baru)
+        $this->call(AcademicSeeder::class);
     }
 }
