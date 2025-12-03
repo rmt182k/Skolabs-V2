@@ -177,12 +177,6 @@ $(document).ready(function () {
                 buttonsHtml += `<a href="${gradeUrl}" class="btn btn-sm btn-outline-info me-1">
                                 <i class="fas fa-star me-1"></i> View Grades
                             </a>`;
-            } else {
-                buttonsHtml += `<a href="javascript:void(0)"
-                                   onclick="alert('Maaf, tombol ini hanya untuk siswa yang sudah mengumpulkan tugas.')"
-                                   class="btn btn-sm btn-outline-secondary me-1">
-                                    <i class="fas fa-star me-1"></i> View Grades
-                                </a>`;
             }
 
             // 3. Permission Edit: edit_assignment

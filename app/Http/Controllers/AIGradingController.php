@@ -260,6 +260,87 @@ class AIGradingController extends Controller
         }
     }
 
+    public function retrySingleAnswerAnalysis(Request $request, $submission_id, $answer_id)
+    {
+        DB::beginTransaction();
+        try {
+            $provider = $request->input('provider', env('AI_GRADING_PROVIDER', 'gemini'));
+
+            // 1. Ambil Data Jawaban Spesifik
+            $answer = DB::table('task_submission_answers as tsa')
+                ->join('questions as q', 'tsa.question_id', '=', 'q.id')
+                ->leftJoin('question_options as qo', function ($join) {
+                    $join->on('q.id', '=', 'qo.question_id')->where('qo.is_correct', true);
+                })
+                ->where('tsa.id', $answer_id)
+                ->where('tsa.task_submission_id', $submission_id)
+                ->select(
+                    'tsa.id as answer_id',
+                    'tsa.question_id',
+                    'tsa.answer_text',
+                    'tsa.question_option_id',
+                    'q.question_text',
+                    'q.type as question_type',
+                    'q.score as max_score',
+                    'q.explanation',
+                    'qo.option_text as correct_answer_text'
+                )
+                ->first();
+
+            if (!$answer) {
+                return response()->json(['success' => false, 'message' => 'Jawaban tidak ditemukan'], 404);
+            }
+
+            // 2. Ambil Data Submission (untuk Konteks Prompt)
+            $submission = DB::table('task_submissions as ts')
+                ->join('tasks as t', 'ts.task_id', '=', 't.id')
+                ->join('users as u', 'ts.student_id', '=', 'u.id')
+                ->where('ts.id', $submission_id)
+                ->select('t.title as task_title', 't.description as task_description', 'u.name as student_name')
+                ->first();
+
+            // 3. Panggil AI Engine (Single Call)
+            // Pastikan method callAIEngine sudah ada di controller ini
+            $result = $this->callAIEngine($provider, $answer, $submission);
+
+            if ($result['success']) {
+                // 4. Update Jawaban
+                DB::table('task_submission_answers')
+                    ->where('id', $answer_id)
+                    ->update([
+                        'ai_suggested_score' => $result['score'],
+                        'ai_feedback' => $result['feedback'],
+                        'ai_raw_results' => json_encode($result['raw_results']),
+                        'ai_processing_status' => 'completed',
+                        'updated_at' => now()
+                    ]);
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Berhasil generate ulang.',
+                    'data' => [
+                        'ai_suggested_score' => $result['score'],
+                        'ai_feedback' => $result['feedback']
+                    ]
+                ]);
+            } else {
+                throw new Exception($result['error'] ?? 'Gagal menghubungi AI');
+            }
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            // Tandai failed agar tombol retry muncul
+            DB::table('task_submission_answers')->where('id', $answer_id)->update([
+                'ai_processing_status' => 'failed',
+                'ai_feedback' => 'Error: ' . $e->getMessage()
+            ]);
+
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
     // ========== HELPER METHODS ==========
 
     /*

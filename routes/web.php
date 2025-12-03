@@ -208,7 +208,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/ai-providers', [AIGradingController::class, 'getAvailableProviders']);
     Route::get('/api/answers/{answer_id}/ai-raw-results', [AIGradingController::class, 'getAIRawResults']);
     Route::get('/api/ai-statistics', [AIGradingController::class, 'getAIStatistics']);
-
+    Route::post('/api/submissions/{submission_id}/answers/{answer_id}/retry-ai', [AIGradingController::class, 'retrySingleAnswerAnalysis']);
     // REPORT
     Route::get('/submissions/{submission_id}/report', [ReportController::class, 'index']);
     Route::get('/api/submissions/{submission_id}/report', [AIGradingController::class, 'getStudentReport']);
