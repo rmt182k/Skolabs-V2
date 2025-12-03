@@ -500,6 +500,15 @@ $(document).ready(function () {
         });
     });
 
+    // Event Listener Task Buttons
+    $('#create-task-btn').on('click', function () {
+        // CLASS_ID adalah variabel global di file ini
+        window.location.href = `/classes/${CLASS_ID}/tasks/create`;
+    });
+    $('#tasks-container').on('click', '.btn-delete-task', function () {
+        confirmDeleteTask($(this).data('id'), $(this).data('title'));
+    });
+
 
     // ========================================================================
     // 7. LOGIC: SISWA (DATATABLE) - (PERMISSIONS OK)
