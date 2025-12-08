@@ -14,6 +14,9 @@ class UserManagementSeeder extends Seeder
         $faker = Faker::create('id_ID');
         $password = Hash::make('1'); // Password default '1'
 
+        // Ambil data referensi
+        $subjectIds = DB::table('subjects')->pluck('id')->toArray();
+
         // --- 1. ADMINS ---
         $admins = [
             [
@@ -84,6 +87,23 @@ class UserManagementSeeder extends Seeder
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
+
+            // --- BAGIAN YANG DIPERBAIKI ---
+            // Setiap guru mengajar 1 sampai 3 mata pelajaran random
+            $assignedSubjects = $faker->randomElements($subjectIds, rand(1, 3));
+
+            foreach ($assignedSubjects as $subId) {
+                // Kita insertSubject Assignment TANPA academic_year_id sesuai skema kamu
+                DB::table('subjects_assignment')->insertOrIgnore([
+                    'user_id' => $userId,
+                    'subject_id' => $subId,
+                    // 'academic_year_id' => $academicYearId, // <--- Baris ini DIHAPUS karena kolom tidak ada
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
         }
+
+        $this->command->info('Teachers created and subjects assigned successfully.');
     }
 }

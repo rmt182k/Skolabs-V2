@@ -127,6 +127,7 @@ class AIGradingControllerBackup extends Controller
 
             if ($answers->isEmpty()) {
                 $this->finalizeEmptySubmission($submission_id);
+                DB::commit(); // Commit transaksi untuk submission kosong
                 return response()->json([
                     'success' => true,
                     'message' => 'Tidak ada jawaban untuk diproses',
@@ -147,11 +148,22 @@ class AIGradingControllerBackup extends Controller
                 $competencies = $answerGroup->whereNotNull('competency_id');
 
                 try {
+                    // ==========================================================
+                    // PERMINTAAN USER: Jangan gunakan autoGradeMultipleChoice,
+                    // komentari methodnya dan gunakan AI untuk semua tipe soal.
+                    // ==========================================================
+                    /*
                     if ($answer->question_type === 'multiple_choice') {
                         $result = $this->autoGradeMultipleChoice($answer);
                     } else {
                         $result = $this->callAIEngine($provider, $answer, $submission, $model);
                     }
+                    */
+
+                    // BARU: Selalu panggil AI Engine untuk semua tipe soal
+                    $result = $this->callAIEngine($provider, $answer, $submission, $model);
+                    // ==========================================================
+
 
                     if ($result['success']) {
                         // UPDATE JAWABAN (FIX: SET score_awarded & teacher_comment)
@@ -164,7 +176,7 @@ class AIGradingControllerBackup extends Controller
                                 'ai_raw_results' => json_encode($result['raw_results']),
                                 'ai_processing_status' => 'completed',
                                 'score_awarded' => $result['score'],      // ✅ FIXED
-                                'teacher_comment' => $result['feedback'],   // ✅ FIXED
+                                'teacher_comment' => $result['feedback'],  // ✅ FIXED
                                 'is_correct' => $result['is_correct'] ?? null,
                                 'updated_at' => now()
                             ]);
@@ -176,6 +188,8 @@ class AIGradingControllerBackup extends Controller
                         $this->allocateToCompetencies($competencies, $result['score'], $answer->max_score, $competencyScores);
 
                     } else {
+                        // Ini adalah penanganan jika AI API mengembalikan error (misal: safety block)
+                        // Jawaban ditandai 'failed' agar tidak diproses ulang.
                         DB::table('task_submission_answers')
                             ->where('id', $answer->answer_id)
                             ->update([
@@ -187,13 +201,21 @@ class AIGradingControllerBackup extends Controller
                     }
 
                 } catch (Exception $e) {
-                    Log::error("Error answer {$answer->answer_id}: " . $e->getMessage());
+                    // Ini adalah penanganan jika terjadi exception (misal: timeout)
+                    // Tidak ada data yang disimpan, status tetap 'pending' (kecuali di-handle di luar)
+                    Log::error("Error processing answer {$answer->answer_id}: " . $e->getMessage());
                     $failedCount++;
+
+                    // Jika Anda ingin *satu* kegagalan jawaban menggagalkan *seluruh* submission,
+                    // aktifkan baris di bawah ini untuk melempar exception ke catch utama.
+                    // throw $e;
                 }
             }
 
             // 5. HITUNG ULANG FINAL GRADE DARI score_awarded (FIX)
-            $totalScore = DB::table('task_submission_answers')
+            // Ini menghitung ulang total skor dari *semua* jawaban yang memiliki nilai,
+            // termasuk yang sudah dinilai sebelumnya.
+            $finalTotalScore = DB::table('task_submission_answers')
                 ->where('task_submission_id', $submission_id)
                 ->whereNotNull('score_awarded')
                 ->sum('score_awarded');
@@ -204,7 +226,7 @@ class AIGradingControllerBackup extends Controller
             $this->saveRecommendations($submission_id, $recommendations);
 
             // 7. FINALIZE
-            $this->finalizeSubmission($submission_id, $totalScore);
+            $this->finalizeSubmission($submission_id, $finalTotalScore);
 
             DB::commit();
 
@@ -212,19 +234,121 @@ class AIGradingControllerBackup extends Controller
                 'success' => true,
                 'message' => "AI selesai! {$processedCount} berhasil, {$failedCount} gagal",
                 'data' => $this->getFullReportData($submission_id),
-                'stats' => compact('processedCount', 'failedCount', 'totalScore', 'provider')
+                'stats' => compact('processedCount', 'failedCount', 'finalTotalScore', 'provider')
             ]);
 
         } catch (Exception $e) {
+            // Ini adalah catch utama. Jika terjadi error di sini (misal: DB error, atau exception
+            // yang dilempar ulang dari loop), seluruh transaksi akan di-rollback.
             DB::rollBack();
-            DB::table('task_submissions')->where('id', $submission_id)->update(['status' => 'submitted']);
-            Log::error("AI Error submission {$submission_id}: " . $e->getMessage());
+
+            // Kembalikan status submission ke 'submitted' agar bisa dicoba lagi
+            // Cek dulu apakah submission masih ada
+            if (DB::table('task_submissions')->where('id', $submission_id)->exists()) {
+                DB::table('task_submissions')->where('id', $submission_id)->update([
+                    'status' => 'submitted',
+                    'updated_at' => now()
+                ]);
+            }
+
+            Log::error("AI Error (Rollback) for submission {$submission_id}: " . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => "Proses AI Gagal (Rollback): " . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function retrySingleAnswerAnalysis(Request $request, $submission_id, $answer_id)
+    {
+        DB::beginTransaction();
+        try {
+            $provider = $request->input('provider', env('AI_GRADING_PROVIDER', 'gemini'));
+
+            // 1. Ambil Data Jawaban Spesifik
+            $answer = DB::table('task_submission_answers as tsa')
+                ->join('questions as q', 'tsa.question_id', '=', 'q.id')
+                ->leftJoin('question_options as qo', function ($join) {
+                    $join->on('q.id', '=', 'qo.question_id')->where('qo.is_correct', true);
+                })
+                ->where('tsa.id', $answer_id)
+                ->where('tsa.task_submission_id', $submission_id)
+                ->select(
+                    'tsa.id as answer_id',
+                    'tsa.question_id',
+                    'tsa.answer_text',
+                    'tsa.question_option_id',
+                    'q.question_text',
+                    'q.type as question_type',
+                    'q.score as max_score',
+                    'q.explanation',
+                    'qo.option_text as correct_answer_text'
+                )
+                ->first();
+
+            if (!$answer) {
+                return response()->json(['success' => false, 'message' => 'Jawaban tidak ditemukan'], 404);
+            }
+
+            // 2. Ambil Data Submission (untuk Konteks Prompt)
+            $submission = DB::table('task_submissions as ts')
+                ->join('tasks as t', 'ts.task_id', '=', 't.id')
+                ->join('users as u', 'ts.student_id', '=', 'u.id')
+                ->where('ts.id', $submission_id)
+                ->select('t.title as task_title', 't.description as task_description', 'u.name as student_name')
+                ->first();
+
+            // 3. Panggil AI Engine (Single Call)
+            // Pastikan method callAIEngine sudah ada di controller ini
+            $result = $this->callAIEngine($provider, $answer, $submission);
+
+            if ($result['success']) {
+                // 4. Update Jawaban
+                DB::table('task_submission_answers')
+                    ->where('id', $answer_id)
+                    ->update([
+                        'ai_suggested_score' => $result['score'],
+                        'ai_feedback' => $result['feedback'],
+                        'ai_raw_results' => json_encode($result['raw_results']),
+                        'ai_processing_status' => 'completed',
+                        'updated_at' => now()
+                    ]);
+
+                DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Berhasil generate ulang.',
+                    'data' => [
+                        'ai_suggested_score' => $result['score'],
+                        'ai_feedback' => $result['feedback']
+                    ]
+                ]);
+            } else {
+                throw new Exception($result['error'] ?? 'Gagal menghubungi AI');
+            }
+
+        } catch (Exception $e) {
+            DB::rollBack();
+            // Tandai failed agar tombol retry muncul
+            DB::table('task_submission_answers')->where('id', $answer_id)->update([
+                'ai_processing_status' => 'failed',
+                'ai_feedback' => 'Error: ' . $e->getMessage()
+            ]);
+
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
     // ========== HELPER METHODS ==========
 
+    /*
+    // ==========================================================
+    // PERMINTAAN USER: autoGradeMultipleChoice dinonaktifkan
+    // dan digantikan dengan penilaian AI.
+    // Method ini dikomentari, tidak dihapus.
+    // ==========================================================
     private function autoGradeMultipleChoice($answer)
     {
         $isCorrect = $answer->question_option_id &&
@@ -249,10 +373,12 @@ class AIGradingControllerBackup extends Controller
             ]
         ];
     }
+    */
 
     private function allocateToCompetencies($competencies, $earned, $max, &$competencyScores)
     {
-        if ($max <= 0) return; // Mencegah pembagian dengan nol
+        if ($max <= 0)
+            return; // Mencegah pembagian dengan nol
 
         foreach ($competencies as $c) {
             $ratio = $earned / $max;
@@ -274,8 +400,15 @@ class AIGradingControllerBackup extends Controller
         );
 
         // Jika updateOrInsert tidak mengembalikan ID, ambil manual
-        if(!$statId) {
-             $statId = DB::table('submission_statistics')->where('task_submission_id', $submission_id)->value('id');
+        if (!$statId) {
+            $statRecord = DB::table('submission_statistics')->where('task_submission_id', $submission_id)->first();
+            $statId = $statRecord ? $statRecord->id : null;
+        }
+
+        // Tambahkan pengecekan jika statId masih null
+        if (!$statId) {
+            Log::error("Failed to create or find submission_statistic for submission_id: {$submission_id}");
+            return; // Keluar dari fungsi jika tidak ada statId
         }
 
         foreach ($scores as $compId => $score) {
@@ -291,7 +424,8 @@ class AIGradingControllerBackup extends Controller
         $recommendations = [];
         foreach ($competencyScores as $compId => $score) {
             $comp = DB::table('competencies')->where('id', $compId)->first();
-            if(!$comp) continue; // Lewati jika kompetensi tidak ditemukan
+            if (!$comp)
+                continue; // Lewati jika kompetensi tidak ditemukan
 
             $max = DB::table('question_competency_allocations')
                 ->where('competency_id', $compId)
@@ -304,7 +438,7 @@ class AIGradingControllerBackup extends Controller
                     'competency_id' => $compId,
                     'type' => 'material',
                     'title' => "Review {$comp->name}",
-                    'description' => "Perdalam {$comp->name} (skor: " . round($percentage,0) . "%)",
+                    'description' => "Perdalam {$comp->name} (skor: " . round($percentage, 0) . "%)",
                     'url' => '#',
                     'priority' => $percentage < 60 ? 'high' : 'medium'
                 ];
@@ -357,10 +491,19 @@ class AIGradingControllerBackup extends Controller
      */
     public function getStudentReport($submission_id)
     {
-        return response()->json([
-            'success' => true,
-            'data' => $this->getFullReportData($submission_id)
-        ]);
+        try {
+            $data = $this->getFullReportData($submission_id);
+            if (isset($data['error'])) {
+                return response()->json(['success' => false, 'message' => $data['error']], 404);
+            }
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+        } catch (Exception $e) {
+            Log::error("Error getting student report {$submission_id}: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Gagal mengambil data laporan'], 500);
+        }
     }
 
     private function getFullReportData($submission_id)
@@ -386,41 +529,50 @@ class AIGradingControllerBackup extends Controller
             )
             ->first();
 
-        if(!$submission) {
+        if (!$submission) {
             return ['error' => 'Submission not found']; // Handle jika submission tidak ada
         }
 
-        // COMPETENCIES
-        $competencies = DB::table('submission_competency_scores as scs')
-            ->join('competencies as c', 'scs.competency_id', '=', 'c.id')
-            ->join('submission_statistics as ss', 'scs.submission_statistic_id', '=', 'ss.id')
-            ->where('ss.task_submission_id', $submission_id)
-            ->select(
-                'c.id as competency_id',
-                'c.name',
-                'c.description',
-                'scs.score as score_awarded'
-            )
-            ->get()
-            ->map(function ($c) {
-                // Ambil max_score terpisah untuk menghindari GROUP BY yang rumit
-                $max_score = DB::table('question_competency_allocations as qca')
-                                ->join('questions as q', 'qca.question_id', '=', 'q.id')
-                                ->join('task_submissions as ts', 'q.task_id', '=', 'ts.task_id')
-                                ->where('ts.id', DB::table('submission_statistics as ss')->where('id', $c->submission_statistic_id)->value('task_submission_id'))
-                                ->where('qca.competency_id', $c->competency_id)
-                                ->sum('qca.max_contribution_score');
+        $submissionStatistic = DB::table('submission_statistics')
+            ->where('task_submission_id', $submission_id)
+            ->first();
 
-                $percentage = $max_score > 0 ? ($c->score_awarded / $max_score) * 100 : 0;
-                return [
-                    'name' => $c->name,
-                    'description' => $c->description,
-                    'score_awarded' => round($c->score_awarded, 1),
-                    'max_score' => round($max_score, 1),
-                    'percentage' => round($percentage, 1),
-                    'level' => $this->getCompetencyLevel($percentage)
-                ];
-            });
+        // COMPETENCIES
+        $competencies = [];
+        if ($submissionStatistic) {
+            $competencies = DB::table('submission_competency_scores as scs')
+                ->join('competencies as c', 'scs.competency_id', '=', 'c.id')
+                ->where('scs.submission_statistic_id', $submissionStatistic->id)
+                ->select(
+                    'c.id as competency_id',
+                    'c.name',
+                    'c.description',
+                    'scs.score as score_awarded',
+                    'scs.submission_statistic_id' // Ambil untuk join ke task_id
+                )
+                ->get()
+                ->map(function ($c) use ($submission_id) { // Pass submission_id
+                    // Ambil max_score terpisah
+                    $max_score = DB::table('question_competency_allocations as qca')
+                        ->join('questions as q', 'qca.question_id', '=', 'q.id')
+                        ->join('tasks as t', 'q.task_id', '=', 't.id')
+                        ->join('task_submissions as ts', 't.id', '=', 'ts.task_id')
+                        ->where('ts.id', $submission_id) // Gunakan submission_id
+                        ->where('qca.competency_id', $c->competency_id)
+                        ->sum('qca.max_contribution_score');
+
+                    $percentage = $max_score > 0 ? (($c->score_awarded ?? 0) / $max_score) * 100 : 0;
+                    return [
+                        'name' => $c->name,
+                        'description' => $c->description,
+                        'score_awarded' => round($c->score_awarded ?? 0, 1),
+                        'max_score' => round($max_score, 1),
+                        'percentage' => round($percentage, 1),
+                        'level' => $this->getCompetencyLevel($percentage)
+                    ];
+                });
+        }
+
 
         // ANSWERS
         $answers = DB::table('task_submission_answers as tsa')
@@ -462,7 +614,7 @@ class AIGradingControllerBackup extends Controller
                 'max' => $max,
                 'percentage' => round($percentage, 1)
             ];
-        });
+        })->values(); // Kirim sebagai array
 
         // RECOMMENDATIONS
         $recommendations = DB::table('learning_recommendations')
@@ -474,8 +626,7 @@ class AIGradingControllerBackup extends Controller
         // RANK & AVERAGE (dari task_class_statistics)
         $stats = DB::table('task_class_statistics')
             ->join('tasks', 'task_class_statistics.task_id', '=', 'tasks.id')
-            ->join('task_submissions', 'tasks.id', '=', 'task_submissions.task_id')
-            ->where('task_submissions.id', $submission_id)
+            ->where('tasks.id', $submission->task_id) // Join berdasarkan task_id
             ->select('average_score', 'total_students')
             ->first();
 
@@ -508,12 +659,16 @@ class AIGradingControllerBackup extends Controller
         // Pastikan $score tidak null, jika null anggap 0
         $score = $score ?? 0;
 
+        $taskId = DB::table('task_submissions')->where('id', $submission_id)->value('task_id');
+
+        if (!$taskId) {
+            return 0; // Tidak bisa menghitung rank jika task_id tidak ada
+        }
+
         return DB::table('task_submissions')
-            ->join('tasks', 'task_submissions.task_id', '=', 'tasks.id')
-            ->where('tasks.id', DB::table('task_submissions')->where('id', $submission_id)->value('task_id'))
+            ->where('task_id', $taskId) // Filter berdasarkan task_id
             ->where('final_grade', '>=', $score)
-            // FIX: Tentukan tabel mana yang memiliki kolom 'status'
-            ->whereIn('task_submissions.status', ['graded', 'pending_review']) // Hitung juga yang sudah dinilai AI
+            ->whereIn('status', ['graded', 'pending_review']) // Hitung juga yang sudah dinilai AI
             ->count();
     }
 
@@ -574,7 +729,7 @@ class AIGradingControllerBackup extends Controller
                 $result = $response->json();
                 $aiText = $result['content'][0]['text'] ?? '';
 
-                $parsed = $this->parseAIResponse($aiText, $answer->max_score);
+                $parsed = $this->parseAIResponse($aiText, $answer->max_score, $answer);
 
                 // Tambahkan metadata dari response
                 if ($parsed['success']) {
@@ -625,7 +780,7 @@ class AIGradingControllerBackup extends Controller
             $prompt = $this->buildPrompt($answer, $submission);
 
             // ==================================================================
-            // PERBAIKAN: Pindahkan API Key dari URL ke Header 'X-goog-api-key'
+            // NOTE: Pindahkan API Key dari URL ke Header 'X-goog-api-key'
             // ==================================================================
 
             // 1. URL sekarang bersih tanpa API key
@@ -659,13 +814,13 @@ class AIGradingControllerBackup extends Controller
                     Log::warning('Gemini API success but no candidates: ', $result);
                     return [
                         'success' => false,
-                        'error' => 'AI returned no response (Safety block)'
+                        'error' => 'AI returned no response (Safety block). Raw: ' . json_encode($result)
                     ];
                 }
 
                 $aiText = $result['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
-                $parsed = $this->parseAIResponse($aiText, $answer->max_score);
+                $parsed = $this->parseAIResponse($aiText, $answer->max_score, $answer);
 
                 // Tambahkan metadata dari response
                 if ($parsed['success']) {
@@ -740,11 +895,11 @@ class AIGradingControllerBackup extends Controller
                 $result = $response->json();
                 $aiText = $result['choices'][0]['message']['content'] ?? '';
 
-                $parsed = $this->parseAIResponse($aiText, $answer->max_score);
+                $parsed = $this->parseAIResponse($aiText, $answer->max_score, $answer);
 
                 // Tambahkan metadata dari response
                 if ($parsed['success']) {
-                     // Ganti nama 'raw_data' menjadi 'raw_results'
+                    // Ganti nama 'raw_data' menjadi 'raw_results'
                     $parsed['raw_results'] = [
                         'provider' => 'openai', // Tambahkan provider
                         'model' => $model,
@@ -788,17 +943,30 @@ class AIGradingControllerBackup extends Controller
         }
         $prompt .= "Siswa: {$submission->student_name}\n\n";
 
-        $prompt .= "PERTANYAAN:\n{$answer->question_text}\n\n";
+        $prompt .= "PERTANYAAN (Tipe: {$answer->question_type}):\n{$answer->question_text}\n\n";
 
         if ($answer->explanation) {
             $prompt .= "PEMBAHASAN/KUNCI JAWABAN:\n{$answer->explanation}\n\n";
         }
 
+        // Jika Pilihan Ganda, tunjukkan jawaban yang benar
+        if ($answer->question_type === 'multiple_choice' && $answer->correct_answer_text) {
+            $prompt .= "PILIHAN JAWABAN BENAR:\n{$answer->correct_answer_text}\n\n";
+        }
+
+        // Jika Isian Singkat, tunjukkan juga jawaban yang diharapkan
         if ($answer->correct_answer_text && $answer->question_type === 'short_answer') {
             $prompt .= "JAWABAN YANG DIHARAPKAN:\n{$answer->correct_answer_text}\n\n";
         }
 
-        $prompt .= "JAWABAN SISWA:\n{$answer->answer_text}\n\n";
+        $prompt .= "JAWABAN SISWA:\n";
+        // Untuk Pilihan Ganda, kita perlu mengambil teks dari question_option_id
+        if ($answer->question_type === 'multiple_choice' && $answer->question_option_id) {
+            $studentOption = DB::table('question_options')->where('id', $answer->question_option_id)->value('option_text');
+            $prompt .= ($studentOption ?? "N/A (ID: {$answer->question_option_id})") . "\n\n";
+        } else {
+            $prompt .= ($answer->answer_text ?? "Tidak ada jawaban") . "\n\n";
+        }
 
         $prompt .= "INSTRUKSI PENILAIAN:\n";
         $prompt .= "1. Skor maksimum: {$answer->max_score} poin\n";
@@ -807,16 +975,24 @@ class AIGradingControllerBackup extends Controller
         $prompt .= "   - Konstruktif dan membangun\n";
         $prompt .= "   - Menjelaskan apa yang sudah benar\n";
         $prompt .= "   - Menjelaskan apa yang perlu diperbaiki\n";
-        $prompt .= "   - Memberikan saran konkret untuk perbaikan\n\n";
+        $prompt .= "   - Memberikan saran konkret untuk perbaikan\n";
+        $prompt .= "4. Untuk Pilihan Ganda: Jika jawaban siswa SAMA DENGAN Pilihan Jawaban Benar, berikan skor MAKSIMUM. Jika tidak, berikan skor 0.\n\n";
 
-        $prompt .= "FORMAT JAWABAN:\n";
-        $prompt .= "Berikan respons dalam format berikut (HARUS PERSIS seperti ini):\n";
+        $prompt .= "FORMAT JAWABAN (HARUS PERSIS):\n";
         $prompt .= "SKOR: [angka]\n";
         $prompt .= "FEEDBACK: [teks feedback Anda]\n\n";
 
-        $prompt .= "Contoh:\n";
+        $prompt .= "Contoh untuk Esai:\n";
         $prompt .= "SKOR: 7.5\n";
-        $prompt .= "FEEDBACK: Jawaban Anda sudah menunjukkan pemahaman yang baik tentang konsep utama. Namun, penjelasan tentang mekanisme bisa lebih detail. Coba tambahkan contoh konkret untuk memperkuat argumen Anda.\n";
+        $prompt .= "FEEDBACK: Jawaban Anda sudah menunjukkan pemahaman yang baik tentang konsep utama. Namun, penjelasan tentang mekanisme bisa lebih detail. Coba tambahkan contoh konkret untuk memperkuat argumen Anda.\n\n";
+
+        $prompt .= "Contoh untuk Pilihan Ganda (Benar):\n";
+        $prompt .= "SKOR: {$answer->max_score}\n";
+        $prompt .= "FEEDBACK: Jawaban Anda benar!\n\n";
+
+        $prompt .= "Contoh untuk Pilihan Ganda (Salah):\n";
+        $prompt .= "SKOR: 0\n";
+        $prompt .= "FEEDBACK: Jawaban Anda kurang tepat. Jawaban yang benar adalah '{$answer->correct_answer_text}'.\n";
 
         return $prompt;
     }
@@ -824,7 +1000,7 @@ class AIGradingControllerBackup extends Controller
     /**
      * Parse response dari AI (Universal untuk semua provider)
      */
-    private function parseAIResponse($aiText, $maxScore)
+    private function parseAIResponse($aiText, $maxScore, $answer) // Tambahkan $answer
     {
         try {
             // Extract SKOR
@@ -844,10 +1020,18 @@ class AIGradingControllerBackup extends Controller
                 $feedback = $aiText; // Gunakan teks mentah jika parse gagal
             }
 
+            // Tambahkan flag 'is_correct' khusus untuk Pilihan Ganda
+            $isCorrect = null;
+            if ($answer->question_type === 'multiple_choice') {
+                // Tentukan 'is_correct' berdasarkan skor yang diberikan AI
+                $isCorrect = $score >= $maxScore;
+            }
+
             return [
                 'success' => true,
                 'score' => $score,
-                'feedback' => $feedback
+                'feedback' => $feedback,
+                'is_correct' => $isCorrect // Kembalikan nilai is_correct
             ];
 
         } catch (Exception $e) {
@@ -1026,9 +1210,11 @@ class AIGradingControllerBackup extends Controller
             $answers = $query->select('tsa.ai_raw_results', 'tsa.ai_suggested_score', 'tsa.score_awarded')
                 ->get();
 
+            $total_processed = $answers->count();
+
             // Aggregate statistics
             $stats = [
-                'total_processed' => $answers->count(),
+                'total_processed' => $total_processed,
                 'by_provider' => [],
                 'by_model' => [],
                 'accuracy' => [
@@ -1037,10 +1223,19 @@ class AIGradingControllerBackup extends Controller
                 ]
             ];
 
+            // Handle jika tidak ada data
+            if ($total_processed === 0) {
+                return response()->json([
+                    'success' => true,
+                    'data' => $stats
+                ]);
+            }
+
             $providerCounts = [];
             $modelCounts = [];
             $totalDifference = 0;
             $approvalCount = 0;
+            $processedWithScore = 0; // Hitung hanya yang punya skor untuk akurasi
 
             foreach ($answers as $answer) {
                 $raw = json_decode($answer->ai_raw_results, true);
@@ -1054,15 +1249,21 @@ class AIGradingControllerBackup extends Controller
                         $model = $raw['model'];
                         $modelCounts[$model] = ($modelCounts[$model] ?? 0) + 1;
                     }
+                } else if ($raw && $raw['type'] === 'multiple_choice' && $raw['provider'] === 'auto_grade') {
+                    // Handle legacy auto_grade jika masih ada di DB
+                    $provider = 'auto_grade';
+                    $providerCounts[$provider] = ($providerCounts[$provider] ?? 0) + 1;
                 }
 
                 // Calculate accuracy
                 if ($answer->score_awarded !== null && $answer->ai_suggested_score !== null) {
                     $diff = abs($answer->score_awarded - $answer->ai_suggested_score);
                     $totalDifference += $diff;
+                    $processedWithScore++;
 
-                    // Consider "approved" if difference <= 1 point
-                    if ($diff <= 1) {
+                    // Consider "approved" if difference <= 1 point (atau 0 untuk PG)
+                    $threshold = ($raw['type'] ?? 'essay') === 'multiple_choice' ? 0 : 1;
+                    if ($diff <= $threshold) {
                         $approvalCount++;
                     }
                 }
@@ -1073,7 +1274,7 @@ class AIGradingControllerBackup extends Controller
                 $stats['by_provider'][] = [
                     'provider' => $provider,
                     'count' => $count,
-                    'percentage' => round(($count / $stats['total_processed']) * 100, 2)
+                    'percentage' => round(($count / $total_processed) * 100, 2)
                 ];
             }
 
@@ -1081,13 +1282,13 @@ class AIGradingControllerBackup extends Controller
                 $stats['by_model'][] = [
                     'model' => $model,
                     'count' => $count,
-                    'percentage' => round(($count / $stats['total_processed']) * 100, 2)
+                    'percentage' => round(($count / $total_processed) * 100, 2)
                 ];
             }
 
-            if ($stats['total_processed'] > 0) {
-                $stats['accuracy']['avg_difference'] = round($totalDifference / $stats['total_processed'], 2);
-                $stats['accuracy']['approval_rate'] = round(($approvalCount / $stats['total_processed']) * 100, 2);
+            if ($processedWithScore > 0) {
+                $stats['accuracy']['avg_difference'] = round($totalDifference / $processedWithScore, 2);
+                $stats['accuracy']['approval_rate'] = round(($approvalCount / $processedWithScore) * 100, 2);
             }
 
             return response()->json([
