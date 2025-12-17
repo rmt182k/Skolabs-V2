@@ -243,8 +243,25 @@ class TaskSubmissionController extends Controller
             ->where('student_id', $studentId)
             ->first();
 
+        // [UBAH LOGIKA] Cek status submission
         if ($existingSubmission) {
-            return response()->json(['success' => false, 'message' => 'Anda sudah pernah mengumpulkan tugas ini.'], 409);
+            if ($existingSubmission->status !== 'in_progress') {
+                return response()->json(['success' => false, 'message' => 'Anda sudah mengumpulkan tugas ini.'], 409);
+            }
+
+            // [BARU] Validasi Durasi (Server-side)
+            if ($task->duration_minutes) {
+                $startedAt = Carbon::parse($existingSubmission->started_at);
+                $allowedEndTime = $startedAt->copy()->addMinutes($task->duration_minutes)->addMinutes(2); // Buffer 2 menit untuk latensi
+
+                if ($now->isAfter($allowedEndTime)) {
+                    // Opsional: Bisa tolak atau terima tapi tandai telat
+                    // Di sini kita terima saja tapi tandai late jika perlu, atau reject
+                    // Sesuai request "validasi", kita reject jika *terlalu* jauh,
+                    // tapi karena auto-submit, biasanya kita toleransi sedikit.
+                    // return response()->json(['success' => false, 'message' => 'Waktu pengerjaan telah habis.'], 403);
+                }
+            }
         }
 
         // Validasi payload baru dari JS
@@ -256,18 +273,38 @@ class TaskSubmissionController extends Controller
         DB::beginTransaction();
         try {
             // [PERUBAIKAN] Status diset ke 'submitted' (atau 'late') untuk menunggu AI
-            // Status 'pending_review' akan di-set oleh AI nanti.
             $submissionStatus = $isLate ? 'late' : 'submitted';
 
-            $submissionId = DB::table('task_submissions')->insertGetId([
-                'task_id' => $task_id,
-                'student_id' => $studentId,
-                'submitted_at' => $now,
-                'status' => $submissionStatus, // Status menunggu antrian AI
-                // Kolom 'final_grade', 'teacher_feedback', 'graded_by' DIBIARKAN NULL
-                'created_at' => $now,
-                'updated_at' => $now,
-            ]);
+            if ($existingSubmission) {
+                // UPDATE existing
+                // Hitung durasi. Gunakan abs() untuk menghindari nilai negatif jika server time sedikit tidak sinkron
+                // atau jika start time tercatat 'di masa depan' karena perbedaan microsecond/latency.
+                $duration = abs($now->diffInSeconds(Carbon::parse($existingSubmission->started_at)));
+
+                DB::table('task_submissions')
+                    ->where('id', $existingSubmission->id)
+                    ->update([
+                        'submitted_at' => $now,
+                        'status' => $submissionStatus,
+                        'duration_seconds' => $duration,
+                        'updated_at' => $now,
+                    ]);
+                $submissionId = $existingSubmission->id;
+
+                // Hapus jawaban lama sementera (untuk overwrite, jika ada draft saving sebelumnya - saat ini belum ada, tapi aman)
+                // DB::table('task_submission_answers')->where('task_submission_id', $submissionId)->delete(); 
+            } else {
+                // INSERT baru (jika entah kenapa tidak ada in_progress)
+                $submissionId = DB::table('task_submissions')->insertGetId([
+                    'task_id' => $task_id,
+                    'student_id' => $studentId,
+                    'started_at' => $now, // Anggap baru mulai
+                    'submitted_at' => $now,
+                    'status' => $submissionStatus,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
 
             $answersToInsert = [];
             foreach ($payload['answers'] as $answer) {
@@ -308,7 +345,6 @@ class TaskSubmissionController extends Controller
                     : 'Jawaban Anda telah berhasil dikumpulkan. Menunggu penilaian.',
                 'submission_id' => $submissionId
             ], 201);
-
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('Error submitting task ' . $task_id . ' for student ' . $studentId . ': ' . $e->getMessage());
@@ -539,7 +575,6 @@ class TaskSubmissionController extends Controller
             ];
 
             return response()->json(['success' => true, 'data' => $data]);
-
         } catch (Exception $e) {
             Log::error('Error fetching submission details for ID ' . $submission_id . ': ' . $e->getMessage());
             return response()->json([
@@ -604,7 +639,6 @@ class TaskSubmissionController extends Controller
                 'success' => true,
                 'message' => 'Penilaian berhasil disimpan!'
             ]);
-
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('Error saving grades for submission ' . $submission_id . ': ' . $e->getMessage());

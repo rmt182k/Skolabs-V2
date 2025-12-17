@@ -24,6 +24,12 @@ $(function () {
     const $questionContainer = $('#question-container');
     const $submitBtn = $('#submit-btn');
 
+    // [BARU] Cache Timer DOM
+    const $stickyTimerBar = $('#sticky-timer-bar');
+    const $timerDisplay = $('#timer-display');
+    let timerInterval = null;
+    let autoSubmitTriggered = false;
+
     // ======================================================================
     // INISIALISASI & MEMUAT DATA
     // ======================================================================
@@ -38,6 +44,11 @@ $(function () {
                 if (response.success && response.data) {
                     populateTaskDetails(response.data.details);
                     renderQuestions(response.data.questions);
+
+                    // [BARU] Mulai Timer jika ada durasi
+                    if (response.data.details.duration_minutes) {
+                        handleTimer(response.data);
+                    }
                     $form.show();
                 } else {
                     throw new Error(response.message || 'Format data tidak valid');
@@ -60,6 +71,79 @@ $(function () {
         $('#task-start-time').text(details.start_time_formatted);
         $('#task-end-time').text(details.end_time_formatted);
         $('#task-description').html(details.description ? details.description.replace(/\n/g, '<br>') : '<p class="text-muted"><i>Tidak ada deskripsi.</i></p>');
+        $('#task-description').html(details.description ? details.description.replace(/\n/g, '<br>') : '<p class="text-muted"><i>Tidak ada deskripsi.</i></p>');
+    }
+
+    // ======================================================================
+    // [BARU] LOGIKA TIMER
+    // ======================================================================
+
+    function handleTimer(data) {
+        const durationMinutes = parseInt(data.details.duration_minutes, 10);
+        if (!durationMinutes || durationMinutes <= 0) return;
+
+        // Tampilkan timer bar
+        $stickyTimerBar.removeClass('d-none').addClass('d-flex');
+
+        // Hitung waktu selesai berdasarkan started_at user
+        const startedAt = new Date(data.user_started_at).getTime();
+        const durationMs = durationMinutes * 60 * 1000;
+        const endTime = startedAt + durationMs;
+
+        // Sinkronisasi waktu dengan server (opsional, tapi disarankan)
+        // Di sini kita pakai waktu browser dulu agar responsif
+
+        updateTimerDisplay(endTime);
+
+        timerInterval = setInterval(() => {
+            updateTimerDisplay(endTime);
+        }, 1000);
+    }
+
+    function updateTimerDisplay(endTime) {
+        const now = new Date().getTime();
+        const distance = endTime - now;
+
+        if (distance < 0) {
+            // Waktu Habis
+            clearInterval(timerInterval);
+            $timerDisplay.text("00:00:00");
+            $timerDisplay.addClass('text-danger');
+
+            if (!autoSubmitTriggered) {
+                autoSubmitTriggered = true;
+                handleTimeWarning('Waktu habis! Jawaban Anda sedang dikumpulkan otomatis...');
+                processSubmission(true); // true = auto submit
+            }
+            return;
+        }
+
+        // Warning jika sisa waktu < 5 menit
+        if (distance < 5 * 60 * 1000) {
+            $timerDisplay.addClass('text-danger').addClass('blink-animation'); // Tambahkan CSS blink jika mau
+        }
+
+        // Format Waktu
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        const formattedTime =
+            (hours < 10 ? "0" + hours : hours) + ":" +
+            (minutes < 10 ? "0" + minutes : minutes) + ":" +
+            (seconds < 10 ? "0" + seconds : seconds);
+
+        $timerDisplay.text(formattedTime);
+    }
+
+    function handleTimeWarning(message) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Perhatian',
+            text: message,
+            showConfirmButton: false,
+            timer: 3000
+        });
     }
 
     // ======================================================================
@@ -166,8 +250,17 @@ $(function () {
         });
     }
 
-    function processSubmission() {
+
+
+    function processSubmission(isAuto = false) {
+        // Stop timer jika ada
+        if (timerInterval) clearInterval(timerInterval);
+
         $submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Mengumpulkan...');
+        if (isAuto) {
+            // Tutup semua input
+            $form.find('input, textarea, button').prop('disabled', true);
+        }
 
         const payload = buildSubmissionPayload();
         console.log('Payload Jawaban:', JSON.stringify(payload, null, 2));

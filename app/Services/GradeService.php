@@ -40,7 +40,7 @@ class GradeService
     public function processBulkGrading($submissionId, $provider, $model)
     {
         // Set limit waktu eksekusi (karena ada sleep/retry)
-        set_time_limit(10);
+        set_time_limit(300);
 
         $submission = $this->getSubmissionData($submissionId);
         if (!$submission) {
@@ -175,7 +175,6 @@ class GradeService
                 } else {
                     throw new Exception($aiResult['error'] ?? 'AI response unsuccessful');
                 }
-
             } catch (Exception $e) {
                 $msg = $e->getMessage();
                 $lastErrorMessage = $msg;

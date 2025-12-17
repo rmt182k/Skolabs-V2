@@ -81,7 +81,8 @@ class TaskController extends Controller
                 'total_possible_score' => $payload['total_possible_score'],
                 'start_time' => Carbon::parse($payload['start_time']),
                 'end_time' => Carbon::parse($payload['end_time']),
-                'status' => 'published', // [BARU] Sesuai migrasi
+                'duration_minutes' => $payload['duration_minutes'] ?? null,
+                'status' => $payload['status'], // [BARU] Status dinamis
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -98,7 +99,6 @@ class TaskController extends Controller
                 'message' => 'Tugas berhasil disimpan!',
                 'task_id' => $taskId
             ], 201);
-
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('Error storing task for class ' . $class_id . ': ' . $e->getMessage());
@@ -147,7 +147,8 @@ class TaskController extends Controller
                 'total_possible_score' => $payload['total_possible_score'],
                 'start_time' => Carbon::parse($payload['start_time']),
                 'end_time' => Carbon::parse($payload['end_time']),
-                'status' => 'published', // [BARU] Sesuai migrasi
+                'duration_minutes' => $payload['duration_minutes'] ?? null,
+                'status' => $payload['status'], // [BARU] Status dinamis
                 'updated_at' => now(),
             ]);
 
@@ -165,7 +166,6 @@ class TaskController extends Controller
                 'success' => true,
                 'message' => 'Tugas berhasil diperbarui!'
             ], 200);
-
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('Error updating task ' . $task_id . ': ' . $e->getMessage());
@@ -211,7 +211,6 @@ class TaskController extends Controller
                 'message' => 'Tugas berhasil diambil.',
                 'data' => $tasks
             ]);
-
         } catch (Exception $e) {
             Log::error('Error fetching tasks for class ' . $class_id . ': ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Gagal mengambil data tugas.'], 500);
@@ -246,6 +245,8 @@ class TaskController extends Controller
                 'total_possible_score' => (int) $task->total_possible_score,
                 'start_time' => Carbon::parse($task->start_time)->format('Y-m-d\TH:i'), // Format untuk datetime-local
                 'end_time' => Carbon::parse($task->end_time)->format('Y-m-d\TH:i'),
+                'duration_minutes' => $task->duration_minutes,
+                'status' => $task->status,
                 'description' => $task->description,
                 'subject_id' => $task->subject_id,
                 'subject_name' => $task->subject_name,
@@ -299,7 +300,6 @@ class TaskController extends Controller
                 'message' => 'Data detail tugas berhasil diambil.',
                 'data' => $taskData
             ]);
-
         } catch (Exception $e) {
             Log::error('Error fetching task details for task ' . $task_id . ': ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Gagal mengambil data detail tugas.'], 500);
@@ -351,7 +351,6 @@ class TaskController extends Controller
                 'success' => true,
                 'message' => 'Tugas dan semua data terkait telah berhasil dihapus.'
             ]);
-
         } catch (Exception $e) {
             DB::rollBack();
             Log::error('Error deleting task ' . $task_id . ': ' . $e->getMessage());
@@ -380,7 +379,6 @@ class TaskController extends Controller
                 'success' => true,
                 'data' => $subjects
             ]);
-
         } catch (Exception $e) {
             Log::error('Error fetching scheduled subjects for class ' . $class_id . ': ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Gagal mengambil data mata pelajaran.'], 500);
@@ -404,6 +402,8 @@ class TaskController extends Controller
             'total_possible_score' => 'required|integer|min:0',
             'start_time' => 'required|date',
             'end_time' => 'required|date|after_or_equal:start_time',
+            'duration_minutes' => 'nullable|integer|min:1',
+            'status' => 'required|in:draft,published,closed',
             'description' => 'nullable|string',
             'questions' => 'required|array|min:1',
             'questions.*.question_text' => 'required|string',
@@ -493,11 +493,14 @@ class TaskController extends Controller
                 ->where('t.id', $task_id)
                 ->where('t.class_id', $class_id)
                 ->select(
+                    't.id',
                     't.title',
                     't.description',
                     't.type',
                     't.start_time',
                     't.end_time',
+                    't.duration_minutes', // [BARU]
+                    't.status',           // [BARU]
                     's.name as subject_name'
                 )
                 ->first();
@@ -506,13 +509,58 @@ class TaskController extends Controller
                 return response()->json(['success' => false, 'message' => 'Tugas tidak ditemukan.'], 404);
             }
 
-            // 2. Cek waktu
+            // 2. Cek waktu & Status
             $now = Carbon::now();
+            if ($task->status !== 'published') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tugas ini belum diterbitkan atau sudah ditutup.'
+                ], 403);
+            }
+
             if ($now->isBefore(Carbon::parse($task->start_time))) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Tugas ini belum dimulai.'
                 ], 403);
+            }
+
+            if ($now->isAfter(Carbon::parse($task->end_time))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tugas ini sudah berakhir.'
+                ], 403);
+            }
+
+            // [BARU] Logika Submission & Started At
+            $studentId = auth()->id(); // Asumsi user login adalah siswa
+
+            // Cek apakah sudah ada submission
+            $submission = DB::table('task_submissions')
+                ->where('task_id', $task_id)
+                ->where('student_id', $studentId)
+                ->first();
+
+            if (!$submission) {
+                // Jika belum ada, buat baru (Mulai Mengerjakan)
+                $submissionId = DB::table('task_submissions')->insertGetId([
+                    'task_id' => $task_id,
+                    'student_id' => $studentId,
+                    'started_at' => $now,
+                    'status' => 'in_progress',
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+                $startedAt = $now;
+            } else {
+                // Jika sudah ada, cek status
+                if ($submission->status === 'submitted' || $submission->status === 'graded') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Anda sudah mengumpulkan tugas ini.'
+                    ], 403);
+                }
+                $startedAt = Carbon::parse($submission->started_at);
             }
 
             // Format waktu untuk ditampilkan
@@ -560,13 +608,14 @@ class TaskController extends Controller
             $taskData = [
                 'details' => $task,
                 'questions' => $questionsPayload,
+                'user_started_at' => $startedAt->toIso8601String(), // Kirim waktu mulai user
+                'server_time' => now()->toIso8601String(), // Kirim waktu server saat ini untuk sinkronisasi
             ];
 
             return response()->json([
                 'success' => true,
                 'data' => $taskData,
             ]);
-
         } catch (Exception $e) {
             Log::error('Error fetching student task view for task ' . $task_id . ': ' . $e->getMessage());
             return response()->json([

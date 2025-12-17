@@ -9,7 +9,7 @@ use Exception;
 
 class AIEngineService
 {
-    private const AI_PROVIDERS = [
+    public const AI_PROVIDERS = [
         'claude' => [
             'name' => 'Anthropic Claude',
             'models' => [

@@ -69,6 +69,12 @@ $(function () {
             placeholder: 'Pilih Tipe'
         });
 
+        // [BARU] Inisialisasi Select2 Status
+        $('#status').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Pilih Status'
+        });
+
         // [BARU & DIPERBAIKI] Inisialisasi Select2 Mata Pelajaran
         $('#subject_id').select2({
             theme: 'bootstrap-5',
@@ -172,6 +178,8 @@ $(function () {
         $('#total_possible_score').val(data.total_possible_score);
         $('#start_time').val(data.start_time);
         $('#end_time').val(data.end_time);
+        $('#duration_minutes').val(data.duration_minutes);
+        $('#status').val(data.status).trigger('change');
         $('#description').val(data.description);
 
         // [BARU] Pre-select Mata Pelajaran
@@ -371,6 +379,11 @@ $(function () {
             $('#end_time').addClass('is-invalid');
             isValid = false;
         }
+        if (!$('#status').val()) {
+            errors.push('Status wajib dipilih.');
+            $('#status').addClass('is-invalid');
+            isValid = false;
+        }
         if (startTime && endTime && new Date(startTime) >= new Date(endTime)) {
             errors.push('Waktu Selesai harus setelah Waktu Mulai.');
             $('#start_time, #end_time').addClass('is-invalid');
@@ -493,6 +506,8 @@ $(function () {
             total_possible_score: finalTotalScore,
             start_time: $('#start_time').val(),
             end_time: $('#end_time').val(),
+            duration_minutes: parseInt($('#duration_minutes').val(), 10) || null,
+            status: $('#status').val(),
             description: $('#description').val().trim(),
             questions: questionsPayload
         };
