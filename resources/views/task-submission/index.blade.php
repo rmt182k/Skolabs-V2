@@ -142,6 +142,15 @@
     $(document).ready(function() {
 
         // ================================================================
+        // [BARU] HELPER PERMISSION (Mirip manage-class.js)
+        // ================================================================
+        const MY_PERMISSIONS = window.globalPermissions || [];
+
+        function can(name) {
+            return MY_PERMISSIONS.includes(name);
+        }
+
+        // ================================================================
         // KONFIGURASI
         // ================================================================
 
@@ -272,10 +281,15 @@
                             case 'submitted':
                             case 'late':
                                 // Status 'late' juga harus bisa di-proses AI
-                                actionButton = `
-                                        <button class="btn btn-sm btn-info btn-aksi run-ai-btn" data-id="${row.submission_id}" title="Mulai analisis AI">
-                                            <i class="fas fa-robot"></i> Jalankan AI
-                                        </button>`;
+                                // CEK PERMISSION
+                                if (can('run_ai_review')) {
+                                    actionButton = `
+                                            <button class="btn btn-sm btn-info btn-aksi run-ai-btn" data-id="${row.submission_id}" title="Mulai analisis AI">
+                                                <i class="fas fa-robot"></i> Jalankan AI
+                                            </button>`;
+                                } else {
+                                    actionButton = `<span class="text-muted small">No Access</span>`;
+                                }
                                 break;
                             case 'ai_processing':
                                 actionButton = `
@@ -284,16 +298,26 @@
                                         </button>`;
                                 break;
                             case 'pending_review':
-                                actionButton = `
-                                        <a href="${gradeUrl}" class="btn btn-sm btn-primary btn-aksi" title="Review hasil AI & beri nilai final">
-                                            <i class="fas fa-edit"></i> Review
-                                        </a>`;
+                                // CEK PERMISSION
+                                if (can('grade_assignment')) {
+                                    actionButton = `
+                                            <a href="${gradeUrl}" class="btn btn-sm btn-primary btn-aksi" title="Review hasil AI & beri nilai final">
+                                                <i class="fas fa-edit"></i> Review
+                                            </a>`;
+                                } else {
+                                    actionButton = `<span class="text-muted small">No Access</span>`;
+                                }
                                 break;
                             case 'graded':
-                                actionButton = `
-                                        <a href="${gradeUrl}" class="btn btn-sm btn-success btn-aksi" title="Lihat hasil akhir">
-                                            <i class="fas fa-eye"></i> Lihat Hasil
-                                        </a>`;
+                                // CEK PERMISSION
+                                if (can('view_grades')) {
+                                    actionButton = `
+                                            <a href="${gradeUrl}" class="btn btn-sm btn-success btn-aksi" title="Lihat hasil akhir">
+                                                <i class="fas fa-eye"></i> Lihat Hasil
+                                            </a>`;
+                                } else {
+                                    actionButton = `<span class="text-muted small">No Access</span>`;
+                                }
                                 break;
                             default:
                                 // Fallback (seharusnya tidak terjadi jika ada submission_id)

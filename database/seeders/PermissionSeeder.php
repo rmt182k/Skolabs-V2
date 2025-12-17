@@ -82,7 +82,7 @@ class PermissionSeeder extends Seeder
             // --- AI Features ---
             ['name' => 'generate_ai_quiz',  'display_name' => 'Generate AI Quiz', 'description' => 'Dapat membuat soal otomatis menggunakan AI.'],
             ['name' => 'ai_student_report', 'display_name' => 'AI Student Report',     'description' => 'Dapat merangkum Report Siswa menggunakan AI.'],
-
+            ['name' => 'run_ai_review',     'display_name' => 'Run AI Review',    'description' => 'Dapat menjalankan (run) analisis AI untuk mengoreksi dan mereview jawaban siswa.'],
             // --- System Settings ---
             ['name' => 'manage_settings',  'display_name' => 'Manage Settings',  'description' => 'Dapat mengubah konfigurasi aplikasi.'],
         ];
