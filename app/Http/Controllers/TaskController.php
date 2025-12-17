@@ -187,6 +187,10 @@ class TaskController extends Controller
         try {
             $tasks = DB::table('tasks as t')
                 ->leftJoin('subjects as s', 't.subject_id', '=', 's.id')
+                ->leftJoin('task_submissions as ts', function ($join) {
+                    $join->on('t.id', '=', 'ts.task_id')
+                        ->where('ts.student_id', '=', auth()->id());
+                })
                 ->where('t.class_id', $class_id)
                 ->select(
                     't.id',
@@ -196,7 +200,10 @@ class TaskController extends Controller
                     't.start_time',
                     't.end_time',
                     't.total_possible_score',
-                    's.name as subject_name'
+                    't.status', // [BARU] Status Draft/Published/Closed
+                    's.name as subject_name',
+                    'ts.status as submission_status', // [BARU] Status pengerjaan (submitted, graded, etc)
+                    'ts.id as submission_id' // [BARU] ID submission jika ada
                 )
                 ->orderBy('t.end_time', 'desc')
                 ->get();

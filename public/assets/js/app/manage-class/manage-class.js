@@ -160,11 +160,51 @@ $(document).ready(function () {
 
             // 1. Permission Siswa: submit_assignment
             if (can('view_assignment')) {
-                const isClosed = status === 'Ditutup' || isExpired;
-                const btnClass = isClosed ? 'btn-secondary disabled' : 'btn-success';
-                const btnUrl = isClosed ? 'javascript:void(0)' : `/classes/${CLASS_ID}/tasks/${task.id}/answer`;
+                const now = new Date();
+                const start = new Date(task.start_time);
+                const end = new Date(task.end_time);
 
-                buttonsHtml += `<a href="${btnUrl}" class="btn btn-sm ${btnClass} me-1"><i class="fas fa-pen-square me-1"></i> ${isClosed ? 'Ditutup' : 'Jawab'}</a>`;
+                // Cek Status Submission
+                const isSubmitted = ['submitted', 'graded', 'pending_review'].includes(task.submission_status);
+                // Cek Status Waktu & Task
+                const isDraft = task.status === 'draft';
+                const isClosedManual = task.status === 'closed';
+                const isNotStarted = now < start;
+                const isLate = now > end;
+
+                let btnClass = 'btn-success';
+                let btnText = 'Jawab';
+                let btnUrl = `/classes/${CLASS_ID}/tasks/${task.id}/answer`;
+                let isDisabled = false;
+
+                if (isSubmitted) {
+                    btnClass = 'btn-secondary disabled';
+                    btnText = 'Sudah Dikerjakan';
+                    btnUrl = 'javascript:void(0)';
+                    isDisabled = true;
+                } else if (isDraft) {
+                    btnClass = 'btn-secondary disabled';
+                    btnText = 'Belum Dirilis';
+                    btnUrl = 'javascript:void(0)';
+                    isDisabled = true;
+                } else if (isClosedManual) {
+                    btnClass = 'btn-danger disabled';
+                    btnText = 'Ditutup';
+                    btnUrl = 'javascript:void(0)';
+                    isDisabled = true;
+                } else if (isNotStarted) {
+                    btnClass = 'btn-secondary disabled';
+                    btnText = 'Belum Mulai';
+                    btnUrl = 'javascript:void(0)';
+                    isDisabled = true;
+                } else if (isLate) {
+                    btnClass = 'btn-secondary disabled';
+                    btnText = 'Waktu Habis';
+                    btnUrl = 'javascript:void(0)';
+                    isDisabled = true;
+                }
+
+                buttonsHtml += `<a href="${btnUrl}" class="btn btn-sm ${btnClass} me-1" ${isDisabled ? 'aria-disabled="true"' : ''}><i class="fas fa-pen-square me-1"></i> ${btnText}</a>`;
             }
 
             // 2. Permission Guru: grade_assignment
@@ -172,7 +212,9 @@ $(document).ready(function () {
                 buttonsHtml += `<a href="/classes/${CLASS_ID}/tasks/${task.id}/submissions" class="btn btn-sm btn-outline-secondary me-1"><i class="fas fa-clipboard-check"></i> View Submission</a>`;
             }
 
+            // Tombol View Grades (Untuk Siswa yg sudah submit / Guru)
             if (can('view_grades') && task.submission_id) {
+                // Jika siswa sudah submit, dia bisa lihat nilai
                 const gradeUrl = `/classes/${CLASS_ID}/tasks/${task.id}/submissions/${task.submission_id}/grade`;
                 buttonsHtml += `<a href="${gradeUrl}" class="btn btn-sm btn-outline-info me-1">
                                 <i class="fas fa-star me-1"></i> View Grades
@@ -200,7 +242,7 @@ $(document).ready(function () {
                         </div>
                     </div>
                     <div class="task-body">
-                        <p class="task-description">${task.description ? task.description.substring(0, 150) + 'Tidak ada deskripsi.' : 'Tidak ada deskripsi.'}</p>
+                        <p class="task-description">${task.description ? task.description.substring(0, 150) + (task.description.length > 150 ? '...' : '') : 'Tidak ada deskripsi.'}</p>
                         <div class="task-meta">
                             <div><span class="badge ${badgeClass}">${status}</span></div>
                             <small class="text-muted"><i class="fas fa-clock"></i> Deadline: ${new Date(task.end_time).toLocaleString('id-ID')}</small>
