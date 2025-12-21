@@ -333,66 +333,68 @@
 </div>
 
 <style>
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.avatar-circle {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 50%;
-    color: white;
-}
-
-.card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.1) !important;
-}
-
-.accordion-button:not(.collapsed) {
-    background-color: #f8f9fa;
-    box-shadow: none;
-}
-
-.accordion-button:focus {
-    box-shadow: none;
-    border-color: rgba(0,0,0,.125);
-}
-
-.competency-item {
-    transition: all 0.3s ease;
-}
-
-.competency-item:hover {
-    background-color: #f8f9fa;
-    border-radius: 8px;
-}
-
-.question-status-badge {
-    width: 35px;
-    height: 35px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    font-weight: bold;
-    font-size: 0.85rem;
-}
-
-@media print {
-    .btn-group, .no-print {
-        display: none !important;
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
-}
+
+    .avatar-circle {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        color: white;
+    }
+
+    .card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .accordion-button:not(.collapsed) {
+        background-color: #f8f9fa;
+        box-shadow: none;
+    }
+
+    .accordion-button:focus {
+        box-shadow: none;
+        border-color: rgba(0, 0, 0, .125);
+    }
+
+    .competency-item {
+        transition: all 0.3s ease;
+    }
+
+    .competency-item:hover {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .question-status-badge {
+        width: 35px;
+        height: 35px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-weight: bold;
+        font-size: 0.85rem;
+    }
+
+    @media print {
+
+        .btn-group,
+        .no-print {
+            display: none !important;
+        }
+    }
 </style>
 @endsection
 
@@ -404,353 +406,409 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function() {
 
-    // ============================================
-    // DATA DUMMY - COMPREHENSIVE
-    // ============================================
+        // ============================================
+        // DATA DUMMY - COMPREHENSIVE
+        // ============================================
 
-    const reportData = {
-        student: {
-            name: 'Budi Susanto',
-            nis: '20240001',
-            class: 'Kelas 10A - IPA 1',
-            email: 'budi.s@sekolah.com',
-            status: 'Siswa Aktif'
-        },
-
-        task: {
-            title: 'Ujian Bab 1: Struktur Sel dan Fotosintesis',
-            type: 'UJIAN',
-            subject: 'Biologi',
-            description: 'Evaluasi pemahaman siswa tentang struktur sel, fungsi organel, dan proses fotosintesis',
-            teacher: 'Andini, S.Pd.',
-            total_questions: 15,
-            total_score: 100
-        },
-
-        submission: {
-            submitted_at: '2025-11-05 09:30:00',
-            duration: '45 menit 32 detik',
-            final_grade: 82.5,
-            status: 'graded',
-            is_late: false,
-            late_days: 0,
-            answered_count: 15,
-            rank: 3,
-            total_students: 30,
-            class_average: 75.2,
-            teacher_feedback: 'Kerja bagus, Budi! Pemahamanmu tentang struktur sel sudah sangat baik dengan jawaban yang detail dan sistematis. Namun, perlu sedikit lebih detail saat menjelaskan proses fotosintesis, terutama pada reaksi gelap (siklus Calvin). Cobalah untuk lebih memperhatikan penggunaan istilah ilmiah yang tepat dan penjelasan mekanisme molekuler. Tingkatkan juga keterampilan menulis ilmiah dengan struktur paragraf yang lebih terorganisir.',
-            learning_recommendations: [
-                'Bab 2: Siklus Calvin',
-                'Video: Reaksi Gelap Fotosintesis',
-                'Latihan: Penulisan Ilmiah'
-            ]
-        },
-
-        competencies: [
-            {
-                name: 'Memahami Struktur Sel',
-                description: 'Kemampuan mengidentifikasi dan menjelaskan fungsi organel sel',
-                score_awarded: 28.0,
-                max_score: 30.0,
-                percentage: 93.3,
-                level: 'Sangat Baik'
+        const reportData = {
+            student: {
+                name: 'Budi Susanto',
+                nis: '20240001',
+                class: 'Kelas 10A - IPA 1',
+                email: 'budi.s@sekolah.com',
+                status: 'Siswa Aktif'
             },
-            {
-                name: 'Analisis Proses Fotosintesis',
-                description: 'Kemampuan menganalisis tahapan dan faktor fotosintesis',
-                score_awarded: 40.5,
-                max_score: 50.0,
-                percentage: 81.0,
-                level: 'Baik'
+
+            task: {
+                title: 'Ujian Bab 1: Struktur Sel dan Fotosintesis',
+                type: 'UJIAN',
+                subject: 'Biologi',
+                description: 'Evaluasi pemahaman siswa tentang struktur sel, fungsi organel, dan proses fotosintesis',
+                teacher: 'Andini, S.Pd.',
+                total_questions: 15,
+                total_score: 100
             },
-            {
-                name: 'Keterampilan Menulis Ilmiah',
-                description: 'Kemampuan menyusun jawaban dengan tata bahasa yang runut',
-                score_awarded: 14.0,
-                max_score: 20.0,
-                percentage: 70.0,
-                level: 'Cukup'
-            }
-        ],
 
-        questionTypes: {
-            'multiple_choice': { scored: 23, max: 25, percentage: 92.0 },
-            'essay': { scored: 39, max: 50, percentage: 78.0 },
-            'short_answer': { scored: 20, max: 25, percentage: 80.0 }
-        },
-
-        answers: [
-            {
-                question_number: 1,
-                question_text: 'Jelaskan perbedaan utama antara sel hewan dan sel tumbuhan, sertakan minimal 4 perbedaan struktural!',
-                type: 'essay',
-                max_score: 20,
-                score_awarded: 18.0,
-                is_correct: null,
-                answer_text: 'Sel tumbuhan memiliki dinding sel yang terbuat dari selulosa, sedangkan sel hewan tidak memiliki dinding sel. Sel tumbuhan memiliki kloroplas untuk fotosintesis, sel hewan tidak. Vakuola pada sel tumbuhan berukuran besar dan tunggal, sementara sel hewan memiliki vakuola kecil atau tidak ada. Sel tumbuhan memiliki bentuk tetap karena dinding sel, sedangkan sel hewan bentuknya tidak tetap.',
-                teacher_comment: 'Jawaban sangat baik dan lengkap! Semua perbedaan dijelaskan dengan detail. Penjelasan tentang fungsi struktural juga sudah tepat.',
-                competency_evaluations: [
-                    { name: 'Memahami Struktur Sel', score: 15.0, max: 15.0 },
-                    { name: 'Keterampilan Menulis Ilmiah', score: 3.0, max: 5.0 }
+            submission: {
+                submitted_at: '2025-11-05 09:30:00',
+                duration: '45 menit 32 detik',
+                final_grade: 82.5,
+                status: 'graded',
+                is_late: false,
+                late_days: 0,
+                answered_count: 15,
+                rank: 3,
+                total_students: 30,
+                class_average: 75.2,
+                teacher_feedback: 'Kerja bagus, Budi! Pemahamanmu tentang struktur sel sudah sangat baik dengan jawaban yang detail dan sistematis. Namun, perlu sedikit lebih detail saat menjelaskan proses fotosintesis, terutama pada reaksi gelap (siklus Calvin). Cobalah untuk lebih memperhatikan penggunaan istilah ilmiah yang tepat dan penjelasan mekanisme molekuler. Tingkatkan juga keterampilan menulis ilmiah dengan struktur paragraf yang lebih terorganisir.',
+                learning_recommendations: [
+                    'Bab 2: Siklus Calvin',
+                    'Video: Reaksi Gelap Fotosintesis',
+                    'Latihan: Penulisan Ilmiah'
                 ]
             },
-            {
-                question_number: 2,
-                question_text: 'Organel yang berfungsi sebagai "pembangkit energi" dalam sel adalah...',
-                type: 'multiple_choice',
-                max_score: 5,
-                score_awarded: 5.0,
-                is_correct: true,
-                selected_option: 'Mitokondria',
-                options: [
-                    { text: 'Ribosom', is_correct: false },
-                    { text: 'Mitokondria', is_correct: true },
-                    { text: 'Lisosom', is_correct: false },
-                    { text: 'Retikulum Endoplasma', is_correct: false }
-                ],
-                teacher_comment: null,
-                competency_evaluations: [
-                    { name: 'Memahami Struktur Sel', score: 5.0, max: 5.0 }
-                ]
-            },
-            {
-                question_number: 3,
-                question_text: 'Jelaskan secara rinci proses yang terjadi pada reaksi terang fotosintesis, termasuk lokasi dan produk yang dihasilkan.',
-                type: 'essay',
-                max_score: 30,
-                score_awarded: 23.0,
-                is_correct: null,
-                answer_text: 'Reaksi terang terjadi di membran tilakoid dalam grana kloroplas. Proses dimulai dengan penyerapan cahaya oleh klorofil. Energi cahaya digunakan untuk memecah molekul air (fotolisis), menghasilkan elektron, proton, dan oksigen. Elektron berenergi tinggi melewati rantai transpor elektron, menghasilkan ATP. NADP+ menerima elektron dan proton membentuk NADPH. Produk akhir reaksi terang adalah ATP, NADPH, dan O2.',
-                teacher_comment: 'Penjelasan sudah baik dan mencakup poin-poin penting. Namun, bisa lebih detail tentang mekanisme fotosistem I dan II, serta proses kemiosmosis dalam pembentukan ATP. Penjelasan transfer elektron bisa diperjelas.',
-                competency_evaluations: [
-                    { name: 'Analisis Proses Fotosintesis', score: 18.0, max: 25.0 },
-                    { name: 'Keterampilan Menulis Ilmiah', score: 5.0, max: 5.0 }
-                ]
-            },
-            {
-                question_number: 4,
-                question_text: 'Sebutkan 3 faktor yang mempengaruhi laju fotosintesis',
-                type: 'short_answer',
-                max_score: 10,
-                score_awarded: 10.0,
-                is_correct: true,
-                answer_text: 'Intensitas cahaya, konsentrasi CO2, dan suhu',
-                teacher_comment: 'Benar! Jawaban tepat dan ringkas.',
-                competency_evaluations: [
-                    { name: 'Analisis Proses Fotosintesis', score: 10.0, max: 10.0 }
-                ]
-            },
-            {
-                question_number: 5,
-                question_text: 'Fungsi utama dari Retikulum Endoplasma Kasar (RER) adalah...',
-                type: 'multiple_choice',
-                max_score: 5,
-                score_awarded: 5.0,
-                is_correct: true,
-                selected_option: 'Sintesis protein',
-                options: [
-                    { text: 'Sintesis lipid', is_correct: false },
-                    { text: 'Sintesis protein', is_correct: true },
-                    { text: 'Pencernaan sel', is_correct: false },
-                    { text: 'Penyimpanan energi', is_correct: false }
-                ],
-                teacher_comment: null,
-                competency_evaluations: [
-                    { name: 'Memahami Struktur Sel', score: 5.0, max: 5.0 }
-                ]
-            }
-        ]
-    };
 
-    // ============================================
-    // RENDER FUNCTIONS
-    // ============================================
-
-    function renderBasicInfo() {
-        const { student, task, submission } = reportData;
-
-        document.getElementById('student-name').textContent = student.name;
-        document.getElementById('student-nis').textContent = student.nis;
-        document.getElementById('student-class').textContent = student.class;
-        document.getElementById('student-email').textContent = student.email;
-        document.getElementById('student-status').textContent = student.status;
-
-        document.getElementById('task-title').textContent = task.title;
-        document.getElementById('task-type').textContent = task.type;
-        document.getElementById('subject-name').textContent = task.subject;
-        document.getElementById('task-description').textContent = task.description;
-        document.getElementById('teacher-name').textContent = task.teacher;
-
-        document.getElementById('submission-time').textContent = new Date(submission.submitted_at).toLocaleString('id-ID', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-        document.getElementById('duration').textContent = submission.duration;
-        document.getElementById('answered-questions').textContent = `${submission.answered_count} / ${task.total_questions}`;
-
-        // Nilai dan Progress
-        const grade = submission.final_grade;
-        document.getElementById('final-grade').textContent = grade.toFixed(1);
-        document.getElementById('grade-progress').style.width = grade + '%';
-
-        // Update warna progress bar
-        const progressBar = document.getElementById('grade-progress');
-        if (grade >= 85) {
-            progressBar.className = 'progress-bar bg-success';
-            document.getElementById('final-grade').style.color = '#28a745';
-        } else if (grade >= 70) {
-            progressBar.className = 'progress-bar bg-info';
-            document.getElementById('final-grade').style.color = '#17a2b8';
-        } else if (grade >= 60) {
-            progressBar.className = 'progress-bar bg-warning';
-            document.getElementById('final-grade').style.color = '#ffc107';
-        } else {
-            progressBar.className = 'progress-bar bg-danger';
-            document.getElementById('final-grade').style.color = '#dc3545';
-        }
-
-        // Kategori Performa
-        let category = '';
-        let categoryClass = '';
-        if (grade >= 90) {
-            category = 'Istimewa';
-            categoryClass = 'bg-purple';
-        } else if (grade >= 85) {
-            category = 'Baik Sekali';
-            categoryClass = 'bg-success';
-        } else if (grade >= 70) {
-            category = 'Baik';
-            categoryClass = 'bg-info';
-        } else if (grade >= 60) {
-            category = 'Cukup';
-            categoryClass = 'bg-warning';
-        } else {
-            category = 'Perlu Perbaikan';
-            categoryClass = 'bg-danger';
-        }
-
-        document.getElementById('performance-category').textContent = category;
-        document.getElementById('performance-category').className = `badge ${categoryClass} fs-6 px-4 py-2`;
-
-        document.getElementById('rank-info').textContent = `Peringkat ${submission.rank} dari ${submission.total_students} siswa`;
-        document.getElementById('class-average').textContent = `Rata-rata kelas: ${submission.class_average}`;
-
-        // Feedback
-        document.getElementById('teacher-feedback').textContent = submission.teacher_feedback;
-
-        // Learning Recommendations
-        const recContainer = document.getElementById('learning-recommendations');
-        recContainer.innerHTML = submission.learning_recommendations.map(rec =>
-            `<span class="badge bg-primary bg-opacity-10 text-primary">${rec}</span>`
-        ).join('');
-
-        // Late status
-        if (submission.is_late) {
-            document.getElementById('late-card').classList.remove('d-none');
-        }
-    }
-
-    function renderCompetencyChart() {
-        const ctx = document.getElementById('competencyRadarChart').getContext('2d');
-        const competencies = reportData.competencies;
-
-        new Chart(ctx, {
-            type: 'radar',
-            data: {
-                labels: competencies.map(c => c.name),
-                datasets: [{
-                    label: 'Pencapaian Siswa (%)',
-                    data: competencies.map(c => c.percentage),
-                    backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                    borderColor: 'rgba(102, 126, 234, 1)',
-                    borderWidth: 2,
-                    pointBackgroundColor: 'rgba(102, 126, 234, 1)',
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: 'rgba(102, 126, 234, 1)',
-                    pointRadius: 5,
-                    pointHoverRadius: 7
-                }, {
-                    label: 'Target Minimal (75%)',
-                    data: competencies.map(() => 75),
-                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                    borderColor: 'rgba(40, 167, 69, 0.5)',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointRadius: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                scales: {
-                    r: {
-                        min: 0,
-                        max: 100,
-                        ticks: {
-                            stepSize: 20,
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        },
-                        pointLabels: {
-                            font: {
-                                size: 11,
-                                weight: 'bold'
-                            }
-                        }
-                    }
+            competencies: [{
+                    name: 'Memahami Struktur Sel',
+                    description: 'Kemampuan mengidentifikasi dan menjelaskan fungsi organel sel',
+                    score_awarded: 28.0,
+                    max_score: 30.0,
+                    percentage: 93.3,
+                    level: 'Sangat Baik'
                 },
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 15,
-                            usePointStyle: true
+                {
+                    name: 'Analisis Proses Fotosintesis',
+                    description: 'Kemampuan menganalisis tahapan dan faktor fotosintesis',
+                    score_awarded: 40.5,
+                    max_score: 50.0,
+                    percentage: 81.0,
+                    level: 'Baik'
+                },
+                {
+                    name: 'Keterampilan Menulis Ilmiah',
+                    description: 'Kemampuan menyusun jawaban dengan tata bahasa yang runut',
+                    score_awarded: 14.0,
+                    max_score: 20.0,
+                    percentage: 70.0,
+                    level: 'Cukup'
+                }
+            ],
+
+            questionTypes: {
+                'multiple_choice': {
+                    scored: 23,
+                    max: 25,
+                    percentage: 92.0
+                },
+                'essay': {
+                    scored: 39,
+                    max: 50,
+                    percentage: 78.0
+                },
+                'short_answer': {
+                    scored: 20,
+                    max: 25,
+                    percentage: 80.0
+                }
+            },
+
+            answers: [{
+                    question_number: 1,
+                    question_text: 'Jelaskan perbedaan utama antara sel hewan dan sel tumbuhan, sertakan minimal 4 perbedaan struktural!',
+                    type: 'essay',
+                    max_score: 20,
+                    score_awarded: 18.0,
+                    is_correct: null,
+                    answer_text: 'Sel tumbuhan memiliki dinding sel yang terbuat dari selulosa, sedangkan sel hewan tidak memiliki dinding sel. Sel tumbuhan memiliki kloroplas untuk fotosintesis, sel hewan tidak. Vakuola pada sel tumbuhan berukuran besar dan tunggal, sementara sel hewan memiliki vakuola kecil atau tidak ada. Sel tumbuhan memiliki bentuk tetap karena dinding sel, sedangkan sel hewan bentuknya tidak tetap.',
+                    teacher_comment: 'Jawaban sangat baik dan lengkap! Semua perbedaan dijelaskan dengan detail. Penjelasan tentang fungsi struktural juga sudah tepat.',
+                    competency_evaluations: [{
+                            name: 'Memahami Struktur Sel',
+                            score: 15.0,
+                            max: 15.0
+                        },
+                        {
+                            name: 'Keterampilan Menulis Ilmiah',
+                            score: 3.0,
+                            max: 5.0
+                        }
+                    ]
+                },
+                {
+                    question_number: 2,
+                    question_text: 'Organel yang berfungsi sebagai "pembangkit energi" dalam sel adalah...',
+                    type: 'multiple_choice',
+                    max_score: 5,
+                    score_awarded: 5.0,
+                    is_correct: true,
+                    selected_option: 'Mitokondria',
+                    options: [{
+                            text: 'Ribosom',
+                            is_correct: false
+                        },
+                        {
+                            text: 'Mitokondria',
+                            is_correct: true
+                        },
+                        {
+                            text: 'Lisosom',
+                            is_correct: false
+                        },
+                        {
+                            text: 'Retikulum Endoplasma',
+                            is_correct: false
+                        }
+                    ],
+                    teacher_comment: null,
+                    competency_evaluations: [{
+                        name: 'Memahami Struktur Sel',
+                        score: 5.0,
+                        max: 5.0
+                    }]
+                },
+                {
+                    question_number: 3,
+                    question_text: 'Jelaskan secara rinci proses yang terjadi pada reaksi terang fotosintesis, termasuk lokasi dan produk yang dihasilkan.',
+                    type: 'essay',
+                    max_score: 30,
+                    score_awarded: 23.0,
+                    is_correct: null,
+                    answer_text: 'Reaksi terang terjadi di membran tilakoid dalam grana kloroplas. Proses dimulai dengan penyerapan cahaya oleh klorofil. Energi cahaya digunakan untuk memecah molekul air (fotolisis), menghasilkan elektron, proton, dan oksigen. Elektron berenergi tinggi melewati rantai transpor elektron, menghasilkan ATP. NADP+ menerima elektron dan proton membentuk NADPH. Produk akhir reaksi terang adalah ATP, NADPH, dan O2.',
+                    teacher_comment: 'Penjelasan sudah baik dan mencakup poin-poin penting. Namun, bisa lebih detail tentang mekanisme fotosistem I dan II, serta proses kemiosmosis dalam pembentukan ATP. Penjelasan transfer elektron bisa diperjelas.',
+                    competency_evaluations: [{
+                            name: 'Analisis Proses Fotosintesis',
+                            score: 18.0,
+                            max: 25.0
+                        },
+                        {
+                            name: 'Keterampilan Menulis Ilmiah',
+                            score: 5.0,
+                            max: 5.0
+                        }
+                    ]
+                },
+                {
+                    question_number: 4,
+                    question_text: 'Sebutkan 3 faktor yang mempengaruhi laju fotosintesis',
+                    type: 'short_answer',
+                    max_score: 10,
+                    score_awarded: 10.0,
+                    is_correct: true,
+                    answer_text: 'Intensitas cahaya, konsentrasi CO2, dan suhu',
+                    teacher_comment: 'Benar! Jawaban tepat dan ringkas.',
+                    competency_evaluations: [{
+                        name: 'Analisis Proses Fotosintesis',
+                        score: 10.0,
+                        max: 10.0
+                    }]
+                },
+                {
+                    question_number: 5,
+                    question_text: 'Fungsi utama dari Retikulum Endoplasma Kasar (RER) adalah...',
+                    type: 'multiple_choice',
+                    max_score: 5,
+                    score_awarded: 5.0,
+                    is_correct: true,
+                    selected_option: 'Sintesis protein',
+                    options: [{
+                            text: 'Sintesis lipid',
+                            is_correct: false
+                        },
+                        {
+                            text: 'Sintesis protein',
+                            is_correct: true
+                        },
+                        {
+                            text: 'Pencernaan sel',
+                            is_correct: false
+                        },
+                        {
+                            text: 'Penyimpanan energi',
+                            is_correct: false
+                        }
+                    ],
+                    teacher_comment: null,
+                    competency_evaluations: [{
+                        name: 'Memahami Struktur Sel',
+                        score: 5.0,
+                        max: 5.0
+                    }]
+                }
+            ]
+        };
+
+        // ============================================
+        // RENDER FUNCTIONS
+        // ============================================
+
+        function renderBasicInfo() {
+            const {
+                student,
+                task,
+                submission
+            } = reportData;
+
+            document.getElementById('student-name').textContent = student.name;
+            document.getElementById('student-nis').textContent = student.nis;
+            document.getElementById('student-class').textContent = student.class;
+            document.getElementById('student-email').textContent = student.email;
+            document.getElementById('student-status').textContent = student.status;
+
+            document.getElementById('task-title').textContent = task.title;
+            document.getElementById('task-type').textContent = task.type;
+            document.getElementById('subject-name').textContent = task.subject;
+            document.getElementById('task-description').textContent = task.description;
+            document.getElementById('teacher-name').textContent = task.teacher;
+
+            document.getElementById('submission-time').textContent = new Date(submission.submitted_at).toLocaleString('id-ID', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            document.getElementById('duration').textContent = submission.duration;
+            document.getElementById('answered-questions').textContent = `${submission.answered_count} / ${task.total_questions}`;
+
+            // Nilai dan Progress
+            const grade = submission.final_grade;
+            document.getElementById('final-grade').textContent = grade.toFixed(1);
+            document.getElementById('grade-progress').style.width = grade + '%';
+
+            // Update warna progress bar
+            const progressBar = document.getElementById('grade-progress');
+            if (grade >= 85) {
+                progressBar.className = 'progress-bar bg-success';
+                document.getElementById('final-grade').style.color = '#28a745';
+            } else if (grade >= 70) {
+                progressBar.className = 'progress-bar bg-info';
+                document.getElementById('final-grade').style.color = '#17a2b8';
+            } else if (grade >= 60) {
+                progressBar.className = 'progress-bar bg-warning';
+                document.getElementById('final-grade').style.color = '#ffc107';
+            } else {
+                progressBar.className = 'progress-bar bg-danger';
+                document.getElementById('final-grade').style.color = '#dc3545';
+            }
+
+            // Kategori Performa
+            let category = '';
+            let categoryClass = '';
+            if (grade >= 90) {
+                category = 'Istimewa';
+                categoryClass = 'bg-purple';
+            } else if (grade >= 85) {
+                category = 'Baik Sekali';
+                categoryClass = 'bg-success';
+            } else if (grade >= 70) {
+                category = 'Baik';
+                categoryClass = 'bg-info';
+            } else if (grade >= 60) {
+                category = 'Cukup';
+                categoryClass = 'bg-warning';
+            } else {
+                category = 'Perlu Perbaikan';
+                categoryClass = 'bg-danger';
+            }
+
+            document.getElementById('performance-category').textContent = category;
+            document.getElementById('performance-category').className = `badge ${categoryClass} fs-6 px-4 py-2`;
+
+            document.getElementById('rank-info').textContent = `Peringkat ${submission.rank} dari ${submission.total_students} siswa`;
+            document.getElementById('class-average').textContent = `Rata-rata kelas: ${submission.class_average}`;
+
+            // Feedback
+            document.getElementById('teacher-feedback').textContent = submission.teacher_feedback;
+
+            // Learning Recommendations
+            const recContainer = document.getElementById('learning-recommendations');
+            recContainer.innerHTML = submission.learning_recommendations.map(rec =>
+                `<span class="badge bg-primary bg-opacity-10 text-primary">${rec}</span>`
+            ).join('');
+
+            // Late status
+            if (submission.is_late) {
+                document.getElementById('late-card').classList.remove('d-none');
+            }
+        }
+
+        function renderCompetencyChart() {
+            const ctx = document.getElementById('competencyRadarChart').getContext('2d');
+            const competencies = reportData.competencies;
+
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: competencies.map(c => c.name),
+                    datasets: [{
+                        label: 'Pencapaian Siswa (%)',
+                        data: competencies.map(c => c.percentage),
+                        backgroundColor: 'rgba(102, 126, 234, 0.2)',
+                        borderColor: 'rgba(102, 126, 234, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(102, 126, 234, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgba(102, 126, 234, 1)',
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }, {
+                        label: 'Target Minimal (75%)',
+                        data: competencies.map(() => 75),
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderColor: 'rgba(40, 167, 69, 0.5)',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20,
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 11,
+                                    weight: 'bold'
+                                }
+                            }
                         }
                     },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.parsed.r.toFixed(1) + '%';
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.r.toFixed(1) + '%';
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
-    }
+            });
+        }
 
-    function renderCompetencyDetails() {
-        const container = document.getElementById('competency-details');
-        const competencies = reportData.competencies;
+        function renderCompetencyDetails() {
+            const container = document.getElementById('competency-details');
+            const competencies = reportData.competencies;
 
-        container.innerHTML = competencies.map((comp, index) => {
-            const percentage = comp.percentage;
-            let colorClass = 'danger';
-            let bgColorClass = 'bg-danger';
-            let icon = 'emoji-frown';
+            container.innerHTML = competencies.map((comp, index) => {
+                const percentage = comp.percentage;
+                let colorClass = 'danger';
+                let bgColorClass = 'bg-danger';
+                let icon = 'emoji-frown';
 
-            if (percentage >= 85) {
-                colorClass = 'success';
-                bgColorClass = 'bg-success';
-                icon = 'emoji-smile';
-            } else if (percentage >= 70) {
-                colorClass = 'info';
-                bgColorClass = 'bg-info';
-                icon = 'emoji-neutral';
-            } else if (percentage >= 60) {
-                colorClass = 'warning';
-                bgColorClass = 'bg-warning';
-                icon = 'emoji-neutral';
-            }
+                if (percentage >= 85) {
+                    colorClass = 'success';
+                    bgColorClass = 'bg-success';
+                    icon = 'emoji-smile';
+                } else if (percentage >= 70) {
+                    colorClass = 'info';
+                    bgColorClass = 'bg-info';
+                    icon = 'emoji-neutral';
+                } else if (percentage >= 60) {
+                    colorClass = 'warning';
+                    bgColorClass = 'bg-warning';
+                    icon = 'emoji-neutral';
+                }
 
-            return `
+                return `
                 <div class="competency-item p-3 mb-3 border rounded">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div class="flex-grow-1">
@@ -773,100 +831,100 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
-        }).join('');
-    }
+            }).join('');
+        }
 
-    function renderQuestionTypeChart() {
-        const ctx = document.getElementById('questionTypeChart').getContext('2d');
-        const types = reportData.questionTypes;
+        function renderQuestionTypeChart() {
+            const ctx = document.getElementById('questionTypeChart').getContext('2d');
+            const types = reportData.questionTypes;
 
-        new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Pilihan Ganda', 'Esai', 'Isian Singkat'],
-                datasets: [{
-                    data: [types.multiple_choice.scored, types.essay.scored, types.short_answer.scored],
-                    backgroundColor: [
-                        'rgba(40, 167, 69, 0.8)',
-                        'rgba(255, 193, 7, 0.8)',
-                        'rgba(23, 162, 184, 0.8)'
-                    ],
-                    borderWidth: 2,
-                    borderColor: '#fff'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 10,
-                            usePointStyle: true,
-                            font: {
-                                size: 11
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Pilihan Ganda', 'Esai', 'Isian Singkat'],
+                    datasets: [{
+                        data: [types.multiple_choice.scored, types.essay.scored, types.short_answer.scored],
+                        backgroundColor: [
+                            'rgba(40, 167, 69, 0.8)',
+                            'rgba(255, 193, 7, 0.8)',
+                            'rgba(23, 162, 184, 0.8)'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 10,
+                                usePointStyle: true,
+                                font: {
+                                    size: 11
+                                }
                             }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const label = context.label || '';
-                                const value = context.parsed;
-                                return label + ': ' + value.toFixed(1) + ' poin';
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed;
+                                    return label + ': ' + value.toFixed(1) + ' poin';
+                                }
                             }
                         }
                     }
                 }
-            }
-        });
-    }
+            });
+        }
 
-    function renderAnswerDetails() {
-        const container = document.getElementById('answerAccordion');
-        const answers = reportData.answers;
+        function renderAnswerDetails() {
+            const container = document.getElementById('answerAccordion');
+            const answers = reportData.answers;
 
-        container.innerHTML = answers.map((answer, index) => {
-            const q = answer;
-            const percentage = (q.score_awarded / q.max_score) * 100;
+            container.innerHTML = answers.map((answer, index) => {
+                const q = answer;
+                const percentage = (q.score_awarded / q.max_score) * 100;
 
-            let scoreBadgeClass = 'bg-danger';
-            let statusIcon = 'x-circle-fill';
-            let statusColor = 'danger';
+                let scoreBadgeClass = 'bg-danger';
+                let statusIcon = 'x-circle-fill';
+                let statusColor = 'danger';
 
-            if (percentage >= 85) {
-                scoreBadgeClass = 'bg-success';
-                statusIcon = 'check-circle-fill';
-                statusColor = 'success';
-            } else if (percentage >= 70) {
-                scoreBadgeClass = 'bg-info';
-                statusIcon = 'check-circle';
-                statusColor = 'info';
-            } else if (percentage >= 60) {
-                scoreBadgeClass = 'bg-warning';
-                statusIcon = 'exclamation-circle';
-                statusColor = 'warning';
-            }
+                if (percentage >= 85) {
+                    scoreBadgeClass = 'bg-success';
+                    statusIcon = 'check-circle-fill';
+                    statusColor = 'success';
+                } else if (percentage >= 70) {
+                    scoreBadgeClass = 'bg-info';
+                    statusIcon = 'check-circle';
+                    statusColor = 'info';
+                } else if (percentage >= 60) {
+                    scoreBadgeClass = 'bg-warning';
+                    statusIcon = 'exclamation-circle';
+                    statusColor = 'warning';
+                }
 
-            // Tipe soal label
-            let typeLabel = '';
-            let typeIcon = '';
-            if (q.type === 'essay') {
-                typeLabel = 'Esai';
-                typeIcon = 'file-text';
-            } else if (q.type === 'multiple_choice') {
-                typeLabel = 'Pilihan Ganda';
-                typeIcon = 'ui-checks';
-            } else {
-                typeLabel = 'Isian Singkat';
-                typeIcon = 'input-cursor-text';
-            }
+                // Tipe soal label
+                let typeLabel = '';
+                let typeIcon = '';
+                if (q.type === 'essay') {
+                    typeLabel = 'Esai';
+                    typeIcon = 'file-text';
+                } else if (q.type === 'multiple_choice') {
+                    typeLabel = 'Pilihan Ganda';
+                    typeIcon = 'ui-checks';
+                } else {
+                    typeLabel = 'Isian Singkat';
+                    typeIcon = 'input-cursor-text';
+                }
 
-            // Render jawaban berdasarkan tipe
-            let answerHtml = '';
-            if (q.type === 'multiple_choice') {
-                answerHtml = `
+                // Render jawaban berdasarkan tipe
+                let answerHtml = '';
+                if (q.type === 'multiple_choice') {
+                    answerHtml = `
                     <h6 class="small fw-bold text-muted mb-2">Pilihan Jawaban:</h6>
                     <ul class="list-group mb-3">
                         ${q.options.map(opt => {
@@ -891,28 +949,35 @@ document.addEventListener('DOMContentLoaded', function() {
                                 iconColor = 'success';
                             }
 
-                            return `
-                                <li class="${itemClass}">
-                                    <i class="bi bi-${icon} text-${iconColor} me-2"></i>
-                                    ${opt.text}
-                                    ${isSelected ? '<span class="badge bg-primary ms-2">Jawaban Anda</span>' : ''}
-                                    ${isCorrect ? '<span class="badge bg-success ms-2">Jawaban Benar</span>' : ''}
-                                </li>
-                            `;
+                            return ` <
+                        li class = "${itemClass}" >
+                        <
+                        i class = "bi bi-${icon} text-${iconColor} me-2" > < /i>
+                    $ {
+                        opt.text
+                    }
+                    $ {
+                        isSelected ? '<span class="badge bg-primary ms-2">Jawaban Anda</span>' : ''
+                    }
+                    $ {
+                        isCorrect ? '<span class="badge bg-success ms-2">Jawaban Benar</span>' : ''
+                    } <
+                    /li>
+                    `;
                         }).join('')}
                     </ul>
                 `;
-            } else {
-                answerHtml = `
+                } else {
+                    answerHtml = `
                     <h6 class="small fw-bold text-muted mb-2">Jawaban Siswa:</h6>
                     <div class="bg-light p-3 rounded border-start border-4 border-primary mb-3">
                         <p class="mb-0" style="white-space: pre-wrap;">${q.answer_text}</p>
                     </div>
                 `;
-            }
+                }
 
-            // Teacher comment
-            const commentHtml = q.teacher_comment ? `
+                // Teacher comment
+                const commentHtml = q.teacher_comment ? `
                 <div class="alert alert-info border-0 border-start border-4 border-info mb-3">
                     <h6 class="alert-heading small fw-bold mb-2">
                         <i class="bi bi-chat-square-text-fill me-2"></i>Komentar Guru:
@@ -921,15 +986,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             ` : '';
 
-            // Competency evaluations
-            const compEvalHtml = q.competency_evaluations.map(eval => {
-                const evalPercentage = (eval.score / eval.max) * 100;
-                let evalColor = 'danger';
-                if (evalPercentage >= 85) evalColor = 'success';
-                else if (evalPercentage >= 70) evalColor = 'info';
-                else if (evalPercentage >= 60) evalColor = 'warning';
+                // Competency evaluations
+                const compEvalHtml = q.competency_evaluations.map(eval => {
+                    const evalPercentage = (eval.score / eval.max) * 100;
+                    let evalColor = 'danger';
+                    if (evalPercentage >= 85) evalColor = 'success';
+                    else if (evalPercentage >= 70) evalColor = 'info';
+                    else if (evalPercentage >= 60) evalColor = 'warning';
 
-                return `
+                    return `
                     <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
                         <span class="small text-muted">
                             <i class="bi bi-bookmark-fill text-${evalColor} me-2"></i>${eval.name}
@@ -937,9 +1002,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <span class="fw-bold text-${evalColor}">${eval.score.toFixed(1)} / ${eval.max.toFixed(1)}</span>
                     </div>
                 `;
-            }).join('');
+                }).join('');
 
-            return `
+                return `
                 <div class="accordion-item">
                     <h2 class="accordion-header">
                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#answer${index}">
@@ -976,37 +1041,41 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
-        }).join('');
-    }
+            }).join('');
+        }
 
-    // ============================================
-    // EVENT HANDLERS
-    // ============================================
+        // ============================================
+        // EVENT HANDLERS
+        // ============================================
 
-    document.getElementById('expand-all')?.addEventListener('click', function() {
-        document.querySelectorAll('.accordion-collapse').forEach(el => {
-            const bsCollapse = new bootstrap.Collapse(el, { toggle: false });
-            bsCollapse.show();
+        document.getElementById('expand-all')?.addEventListener('click', function() {
+            document.querySelectorAll('.accordion-collapse').forEach(el => {
+                const bsCollapse = new bootstrap.Collapse(el, {
+                    toggle: false
+                });
+                bsCollapse.show();
+            });
         });
-    });
 
-    document.getElementById('collapse-all')?.addEventListener('click', function() {
-        document.querySelectorAll('.accordion-collapse').forEach(el => {
-            const bsCollapse = new bootstrap.Collapse(el, { toggle: false });
-            bsCollapse.hide();
+        document.getElementById('collapse-all')?.addEventListener('click', function() {
+            document.querySelectorAll('.accordion-collapse').forEach(el => {
+                const bsCollapse = new bootstrap.Collapse(el, {
+                    toggle: false
+                });
+                bsCollapse.hide();
+            });
         });
+
+        // ============================================
+        // INITIALIZE
+        // ============================================
+
+        renderBasicInfo();
+        renderCompetencyChart();
+        renderCompetencyDetails();
+        renderQuestionTypeChart();
+        renderAnswerDetails();
+
     });
-
-    // ============================================
-    // INITIALIZE
-    // ============================================
-
-    renderBasicInfo();
-    renderCompetencyChart();
-    renderCompetencyDetails();
-    renderQuestionTypeChart();
-    renderAnswerDetails();
-
-});
 </script>
 @endpush

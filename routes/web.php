@@ -213,6 +213,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // REPORT
     Route::get('/submissions/{submission_id}/report', [ReportController::class, 'index']);
+    Route::post('/api/submissions/{submission_id}/report/generate', [AssessmentReportController::class, 'generate']);
     Route::get('/api/submissions/{submission_id}/report', [AssessmentReportController::class, 'getStudentReport']);
 
     // TEST AI

@@ -311,12 +311,23 @@
                             case 'graded':
                                 // CEK PERMISSION
                                 if (can('view_grades')) {
-                                    actionButton = `
-                                            <a href="${gradeUrl}" class="btn btn-sm btn-success btn-aksi" title="Lihat hasil akhir">
+                                    actionButton += `
+                                            <a href="${gradeUrl}" class="btn btn-sm btn-success btn-aksi mb-1" title="Lihat hasil akhir">
                                                 <i class="fas fa-eye"></i> Lihat Hasil
                                             </a>`;
-                                } else {
-                                    actionButton = `<span class="text-muted small">No Access</span>`;
+                                }
+
+                                // [BARU] Tombol Generate Report (Separated)
+                                if (can('ai_student_report')) {
+                                    actionButton += `
+                                            <button class="btn btn-sm btn-primary btn-aksi generate-report-btn" data-id="${row.submission_id}" title="Generasi Laporan AI">
+                                                <i class="fas fa-magic"></i> Buat Report
+                                            </button>`;
+                                    // Jika report sudah ada, bisa ganti jadi tombol "Lihat Report"
+                                    actionButton += `
+                                            <a href="/submissions/${row.submission_id}/report" class="btn btn-sm btn-warning btn-aksi mt-1" target="_blank" title="Lihat Laporan Siswa">
+                                                <i class="fas fa-chart-pie"></i> Lihat Report
+                                            </a>`;
                                 }
                                 break;
                             default:
@@ -401,8 +412,48 @@
         }
 
         // ================================================================
-        // [BARU] EVENT HANDLER UNTUK TOMBOL "JALANKAN AI"
+        // [BARU] EVENT HANDLER UNTUK TOMBOL "Generate Report"
         // ================================================================
+        $('#submissions-table tbody').on('click', '.generate-report-btn', function() {
+            const $button = $(this);
+            const submissionId = $button.data('id');
+            const $row = $button.closest('tr');
+            const rowData = table.row($row).data();
+
+            Swal.fire({
+                title: 'Generate Student Report?',
+                html: `Buat laporan analisis kompetensi untuk: <br><b>${rowData.name}</b>?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#0d6efd',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, Buat Laporan',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Loading...');
+
+                    $.ajax({
+                        url: `/api/submissions/${submissionId}/report/generate`,
+                        method: 'POST',
+                        success: function(res) {
+                            Swal.fire('Berhasil!', res.message, 'success');
+                            // Tidak perlu reload, user bisa langsung klik tombol "Lihat Report" yg sudah ada
+                            $button.prop('disabled', false).html('<i class="fas fa-check"></i> Selesai');
+                            setTimeout(() => {
+                                $button.html('<i class="fas fa-magic"></i> Buat Report Lagi');
+                            }, 2000);
+                        },
+                        error: function(xhr) {
+                            const msg = xhr.responseJSON?.error || xhr.responseJSON?.message || 'Gagal membuat laporan.';
+                            Swal.fire('Gagal!', msg, 'error');
+                            $button.prop('disabled', false).html('<i class="fas fa-magic"></i> Buat Report');
+                        }
+                    });
+                }
+            });
+        });
+
         // ================================================================
         // [BARU] EVENT HANDLER UNTUK TOMBOL "JALANKAN AI" (DENGAN POLLING)
         // ================================================================
