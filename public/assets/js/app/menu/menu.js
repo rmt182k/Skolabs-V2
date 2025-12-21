@@ -226,7 +226,24 @@ $(document).ready(function () {
         let roleRows = '';
         allRoles.forEach(role => {
             const hasAccess = rolesWithAccess.includes(role.id);
-            const permissions = assignedPermissions.find(x => x.role_id === role.id)?.permissions || [];
+            // 1. Cari data role di dalam assignedPermissions
+            const foundRole = assignedPermissions.find(function (item) {
+                // Kita paksa keduanya menjadi String agar pasti cocok
+                // Ini menangani kasus dimana satu adalah '1' dan lainnya adalah 1
+                return String(item.role_id) === String(role.id);
+            });
+
+            let permissions;
+
+            // 2. Cek apakah role ditemukan
+            if (foundRole) {
+                // 3. Ambil array permissions dari objek tersebut
+                // Di gambar kamu terlihat ini adalah array string ["create_user", "edit_user", ...]
+                permissions = foundRole.permissions || [];
+            } else {
+                // 4. Jika tidak ditemukan, kasih array kosong agar .includes() tidak error
+                permissions = [];
+            }
 
             // --- PERBAIKAN 1: HAPUS VARIABLE isDisabled ---
             // Kita ingin checkbox selalu aktif.
