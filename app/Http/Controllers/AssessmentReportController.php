@@ -16,35 +16,6 @@ class AssessmentReportController extends Controller
     }
 
     /**
-     * API untuk memicu pembuatan laporan siswa (Manual Trigger)
-     */
-    public function generate(Request $request, $submission_id)
-    {
-
-        // 1. Ambil Submission
-        $submission = DB::table('task_submissions')->find($submission_id);
-        if (!$submission) {
-            return response()->json(['error' => 'Submission not found'], 404);
-        }
-
-        // 2. Validasi Status (Harus Graded/Sudah Dinilai Guru)
-        if ($submission->status !== 'graded') {
-            return response()->json([
-                'error' => 'Submission must be graded by teacher first.'
-            ], 400);
-        }
-
-        // 3. Generate Report via Service
-        $result = $this->reportService->generateStudentReport($submission_id);
-
-        if ($result['success']) {
-            return response()->json(['success' => true, 'message' => 'Laporan berhasil dibuat.']);
-        } else {
-            return response()->json(['success' => false, 'message' => $result['message']], 500);
-        }
-    }
-
-    /**
      * API untuk mengambil data JSON laporan siswa
      */
     public function getStudentReport($submission_id)
@@ -53,10 +24,13 @@ class AssessmentReportController extends Controller
         if (!$submission)
             return response()->json(['error' => 'Not found'], 404);
 
-        // [MODIFIED] Tidak lagi auto-generate. Hanya mengembalikan data yang ada.
+        // LAZY LOADING: Generate report jika status graded tapi statistik belum ada
+        $hasStats = DB::table('submission_statistics')->where('task_submission_id', $submission_id)->exists();
 
-        // Cek apakah statistik sudah ada (optional check)
-        // $hasStats = DB::table('submission_statistics')->where('task_submission_id', $submission_id)->exists();
+        // Panggil Service AI Report Generator jika belum ada data analisis
+        if ($submission->status === 'graded' && !$hasStats) {
+            $this->reportService->generateStudentReport($submission_id);
+        }
 
         // Build Data Response
         $data = $this->buildReportData($submission_id);

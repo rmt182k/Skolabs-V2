@@ -12,5 +12,4 @@ class ReportController extends Controller
             'submission_id' => $submission_id
         ]);
     }
-
 }

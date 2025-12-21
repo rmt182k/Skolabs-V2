@@ -115,7 +115,6 @@ class ReportGeneratorService
 
             DB::commit();
             return ['success' => true];
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Report Gen Error: " . $e->getMessage());

@@ -2,807 +2,756 @@
 @section('title', 'Laporan Detail Hasil Tugas Siswa')
 
 @push('styles')
-    {{-- Memuat Chart.js di head --}}
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="{{ asset('assets/css/report/student-report.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="{{ asset('assets/css/report/student-report.css') }}">
 @endpush
 
 @section('content')
-    <div class="container-fluid px-4 py-4">
+<div class="container-fluid px-4 py-4">
 
-        <div class="d-flex justify-content-between align-items-center mb-4 no-print">
-            <div>
-                <h2 class="fw-bold mb-1">Laporan Hasil Tugas</h2>
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">Dashboard</a></li>
-                        <li class="breadcrumb-item"><a href="#" class="text-decoration-none">Tugas</a></li>
-                        <li class="breadcrumb-item active">Detail Laporan</li>
-                    </ol>
-                </nav>
-            </div>
-            <div class="btn-group">
-                <button class="btn btn-outline-primary" id="print-btn">
-                    <i class="fas fa-print me-2"></i>Cetak
-                </button>
-                <a href="/api/export/submission/1/pdf" class="btn btn-outline-success">
-                    <i class="fas fa-file-pdf me-2"></i>Export PDF
-                </a>
+    {{-- Header & Tombol Aksi --}}
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <div>
+            <h2 class="fw-bold mb-1">Laporan Hasil Tugas</h2>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/dashboard" class="text-decoration-none">Dashboard</a></li>
+                    <li class="breadcrumb-item active">Detail Laporan</li>
+                </ol>
+            </nav>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-outline-primary" id="print-btn">
+                <i class="fas fa-print me-2"></i>Cetak
+            </button>
+            {{-- ID submission dinamis --}}
+            <a href="/api/export/submission/{{ $submission->id ?? 1 }}/pdf" class="btn btn-outline-success">
+                <i class="fas fa-file-pdf me-2"></i>Export PDF
+            </a>
+        </div>
+    </div>
+
+    {{-- Loading Spinner --}}
+    <div id="loading-spinner" class="text-center py-5">
+        <div class="spinner-border text-primary" style="width: 3.5rem; height: 3.5rem;" role="status">
+            <span class="visually-hidden">Memuat...</span>
+        </div>
+        <p class="mt-3 text-muted fs-5">Memuat Laporan...</p>
+    </div>
+
+    {{-- Konten Laporan --}}
+    <div id="report-content" style="display: none;">
+
+        {{-- Info Alert --}}
+        <div class="alert alert-info border-0 shadow-sm mb-4 d-flex align-items-center" role="alert">
+            <i class="fas fa-info-circle fs-4 me-3"></i>
+            <div class="flex-grow-1">
+                <strong>Laporan Komprehensif</strong> - Analisis detail mencakup nilai per soal, evaluasi kompetensi, dan rekomendasi pembelajaran.
             </div>
         </div>
 
-        <div id="loading-spinner" class="text-center py-5">
-            <div class="spinner-border text-primary" style="width: 3.5rem; height: 3.5rem;" role="status">
-                <span class="visually-hidden">Memuat...</span>
-            </div>
-            <p class="mt-3 text-muted fs-5">Memuat Laporan...</p>
-        </div>
-
-        <div id="report-content" style="display: none;">
-            <div class="alert alert-info border-0 shadow-sm mb-4 d-flex align-items-center" role="alert">
-                <i class="fas fa-info-circle fs-4 me-3"></i>
-                <div class="flex-grow-1">
-                    <strong>Laporan Komprehensif</strong> - Analisis detail mencakup nilai per soal, evaluasi kompetensi,
-                    dan rekomendasi pembelajaran.
+        <div class="row g-4">
+            {{-- Kolom Kiri: Profil & Statistik --}}
+            <div class="col-lg-4">
+                {{-- Card Profil Siswa --}}
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-body p-4">
+                        <div class="text-center mb-4">
+                            <div class="avatar-circle mb-3">
+                                <i class="fas fa-user-circle fs-1 text-secondary"></i>
+                            </div>
+                            <h5 class="fw-bold mb-1" id="student-name">...</h5>
+                            <p class="text-muted mb-0" id="student-class">...</p>
+                            <span class="badge bg-success mt-2">Siswa Aktif</span>
+                        </div>
+                        <hr class="my-4">
+                        <dl class="row mb-0">
+                            <dt class="col-5 text-muted small mb-2">NIS</dt>
+                            <dd class="col-7 small mb-2 fw-medium" id="student-nis">...</dd>
+                            <dt class="col-5 text-muted small mb-2">Email</dt>
+                            <dd class="col-7 small mb-2 text-truncate" id="student-email">...</dd>
+                            <dt class="col-5 text-muted small mb-2">Tahun Ajaran</dt>
+                            <dd class="col-7 small mb-2" id="academic-year">...</dd>
+                            <dt class="col-5 text-muted small">Semester</dt>
+                            <dd class="col-7 small fw-medium" id="semester">...</dd>
+                        </dl>
+                    </div>
                 </div>
-            </div>
 
-            <div class="row g-4">
-                <div class="col-lg-4">
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-body p-4">
-                            <div class="text-center mb-4">
-                                <div class="avatar-circle mb-3">
-                                    <i class="fas fa-user-circle fs-1"></i>
-                                </div>
-                                <h5 class="fw-bold mb-1" id="student-name">...</h5>
-                                <p class="text-muted mb-0" id="student-class">...</p>
-                                <span class="badge bg-success mt-2" id="student-status">Siswa Aktif</span>
-                            </div>
-                            <hr class="my-4">
-                            <dl class="row mb-0">
-                                <dt class="col-5 text-muted small mb-2">NIS</dt>
-                                <dd class="col-7 small mb-2 fw-medium" id="student-nis">...</dd>
-                                <dt class="col-5 text-muted small mb-2">Email</dt>
-                                <dd class="col-7 small mb-2" id="student-email">...</dd>
-                                <dt class="col-5 text-muted small mb-2">Tahun Ajaran</dt>
-                                <dd class="col-7 small mb-2" id="academic-year">...</dd>
-                                <dt class="col-5 text-muted small">Semester</dt>
-                                <dd class="col-7 small fw-medium" id="semester">...</dd>
-                            </dl>
-                        </div>
+                {{-- Card Statistik --}}
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h6 class="mb-0 fw-bold">Statistik Pengerjaan</h6>
                     </div>
-
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-header bg-white border-bottom py-3">
-                            <h6 class="mb-0 fw-bold">Statistik Pengerjaan</h6>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
-                                <div><i class="fas fa-history text-primary fs-4"></i></div>
-                                <div class="text-end">
-                                    <div class="small text-muted">Waktu Pengerjaan</div>
-                                    <div class="fw-bold" id="duration">...</div>
-                                </div>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
-                                <div><i class="fas fa-calendar-check text-success fs-4"></i></div>
-                                <div class="text-end">
-                                    <div class="small text-muted">Waktu Kumpul</div>
-                                    <div class="fw-bold" id="submission-time">...</div>
-                                </div>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
-                                <div><i class="fas fa-check-circle text-info fs-4"></i></div>
-                                <div class="text-end">
-                                    <div class="small text-muted">Soal Terjawab</div>
-                                    <div class="fw-bold" id="answered-questions">...</div>
-                                </div>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div><i class="fas fa-id-badge text-warning fs-4"></i></div>
-                                <div class="text-end">
-                                    <div class="small text-muted">Diperiksa Oleh</div>
-                                    <div class="fw-bold" id="teacher-name">...</div>
-                                </div>
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                            <div><i class="fas fa-history text-primary fs-4"></i></div>
+                            <div class="text-end">
+                                <div class="small text-muted">Durasi</div>
+                                <div class="fw-bold" id="duration">...</div>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="card border-0 shadow-sm bg-warning bg-opacity-10 d-none" id="late-card">
-                        <div class="card-body p-3">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-exclamation-triangle text-warning fs-4 me-3"></i>
-                                <div>
-                                    <small class="text-muted d-block">Status Pengumpulan</small>
-                                    <strong class="text-warning" id="late-status">...</strong>
-                                </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                            <div><i class="fas fa-calendar-check text-success fs-4"></i></div>
+                            <div class="text-end">
+                                <div class="small text-muted">Dikumpulkan</div>
+                                <div class="fw-bold" id="submission-time">...</div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-3 border-bottom">
+                            <div><i class="fas fa-check-circle text-info fs-4"></i></div>
+                            <div class="text-end">
+                                <div class="small text-muted">Soal Terjawab</div>
+                                <div class="fw-bold" id="answered-questions">...</div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div><i class="fas fa-user-tie text-warning fs-4"></i></div>
+                            <div class="text-end">
+                                <div class="small text-muted">Diperiksa Oleh</div>
+                                <div class="fw-bold" id="teacher-name">...</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-lg-8">
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-header bg-gradient-primary text-white py-4">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <div class="d-flex align-items-center mb-2">
-                                        <span class="badge bg-white bg-opacity-25 me-2" id="task-type">...</span>
-                                        <span class="badge bg-white bg-opacity-25" id="subject-name">...</span>
-                                    </div>
-                                    <h4 class="fw-bold mb-2" id="task-title">...</h4>
-                                    <p class="mb-0 opacity-90 small" id="task-description">...</p>
-                                </div>
+                {{-- Card Status Terlambat (Hidden by default) --}}
+                <div class="card border-0 shadow-sm bg-warning bg-opacity-10 d-none" id="late-card">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle text-warning fs-4 me-3"></i>
+                            <div>
+                                <small class="text-muted d-block">Status Pengumpulan</small>
+                                <strong class="text-warning" id="late-status">...</strong>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
 
-                        <div class="card-body p-0">
-                            <div class="row g-0">
-                                <div class="col-md-6 p-4 text-center border-end">
-                                    <div class="small text-muted text-uppercase mb-2 fw-medium">Nilai Akhir</div>
-                                    <div class="display-1 fw-bold mb-2" id="final-grade" style="color: #dc3545;">...
-                                    </div>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar" id="grade-progress" style="width: 0%"></div>
-                                    </div>
-                                    <div class="mt-2 small text-muted">dari 100.0 poin</div>
+            {{-- Kolom Kanan: Nilai & Analisis --}}
+            <div class="col-lg-8">
+                {{-- Header Nilai --}}
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-gradient-primary text-white py-4">
+                        <div class="d-flex align-items-center mb-2">
+                            <span class="badge bg-white bg-opacity-25 me-2" id="task-type">...</span>
+                            <span class="badge bg-white bg-opacity-25" id="subject-name">...</span>
+                        </div>
+                        <h4 class="fw-bold mb-2" id="task-title">...</h4>
+                        <p class="mb-0 opacity-90 small" id="task-description">...</p>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="row g-0">
+                            <div class="col-md-6 p-4 text-center border-end">
+                                <div class="small text-muted text-uppercase mb-2 fw-medium">Nilai Akhir</div>
+                                <div class="display-1 fw-bold mb-2" id="final-grade">0</div>
+                                <div class="progress mx-auto" style="height: 8px; width: 80%;">
+                                    <div class="progress-bar" id="grade-progress" style="width: 0%"></div>
                                 </div>
-                                <div class="col-md-6 p-4">
-                                    <div class="small text-muted text-uppercase mb-3 fw-medium text-center">Kategori
-                                        Performa</div>
-                                    <div class="text-center mb-3">
-                                        <span class="badge fs-6 px-4 py-2" id="performance-category">...</span>
+                                <div class="mt-2 small text-muted">dari 100.0 poin</div>
+                            </div>
+                            <div class="col-md-6 p-4">
+                                <div class="small text-muted text-uppercase mb-3 fw-medium text-center">Kategori Performa</div>
+                                <div class="text-center mb-3">
+                                    <span class="badge fs-6 px-4 py-2" id="performance-category">...</span>
+                                </div>
+                                <div class="small text-center">
+                                    <div class="mb-2">
+                                        <i class="fas fa-trophy text-warning me-1"></i>
+                                        <span class="fw-medium" id="rank-info">...</span>
                                     </div>
-                                    <div class="small text-center">
-                                        <div class="mb-2">
-                                            <i class="fas fa-trophy text-warning me-1"></i>
-                                            <span class="fw-medium" id="rank-info">...</span>
-                                        </div>
-                                        <div class="text-muted" id="class-average">...</div>
-                                    </div>
+                                    <div class="text-muted" id="class-average">...</div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-header bg-white border-bottom py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0 fw-bold">
-                                    <i class="fas fa-chart-line text-primary me-2"></i>
-                                    Analisis Pencapaian Kompetensi
-                                </h5>
-                            </div>
-                            <p class="text-muted small mb-0 mt-2">Evaluasi kemampuan siswa berdasarkan indikator kompetensi
-                                yang diuji</p>
+                {{-- Analisis Kompetensi (Chart) --}}
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-chart-line text-primary me-2"></i>Analisis Pencapaian Kompetensi</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="mb-4" style="height: 300px;">
+                            <canvas id="competencyRadarChart"></canvas>
                         </div>
-                        <div class="card-body p-4">
-                            <div class="mb-4">
-                                <canvas id="competencyRadarChart" height="280"></canvas>
+                        <div id="competency-details" class="mt-4"></div>
+                        <div class="alert alert-light border-0 mt-4">
+                            <h6 class="alert-heading fw-bold small"><i class="fas fa-lightbulb text-warning me-2"></i>Insight Kompetensi</h6>
+                            <ul class="mb-0 small" id="competency-insights"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Distribusi Tipe Soal --}}
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom py-3">
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-chart-pie text-success me-2"></i>Distribusi Nilai per Tipe Soal</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <div style="height: 200px;">
+                                    <canvas id="questionTypeChart"></canvas>
+                                </div>
                             </div>
-                            <div id="competency-details" class="mt-4">
-                            </div>
-                            <div class="alert alert-light border-0 mt-4">
-                                <h6 class="alert-heading fw-bold small">
-                                    <i class="fas fa-lightbulb text-warning me-2"></i>Insight Kompetensi
-                                </h6>
-                                <ul class="mb-0 small" id="competency-insights">
-                                </ul>
+                            <div class="col-md-6">
+                                <div id="question-type-details" class="d-flex flex-column justify-content-center h-100 mt-3 mt-md-0"></div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="card border-0 shadow-sm mb-4">
-                        <div class="card-header bg-white border-bottom py-3">
-                            <h5 class="mb-0 fw-bold">
-                                <i class="fas fa-chart-pie text-success me-2"></i>
-                                Distribusi Nilai per Tipe Soal
-                            </h5>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <canvas id="questionTypeChart" height="200"></canvas>
-                                </div>
-                                <div class="col-md-6">
-                                    <div id="question-type-details"
-                                        class="d-flex flex-column justify-content-center h-100">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                {{-- Umpan Balik Guru --}}
+                <div class="card border-0 shadow-sm mb-4" id="teacher-feedback-card" style="display: none;">
+                    <div class="card-header bg-light border-bottom py-3">
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-quote-left text-info me-2"></i>Umpan Balik Guru</h5>
                     </div>
-
-                    <div class="card border-0 shadow-sm mb-4" id="teacher-feedback-card" style="display: none;">
-                        <div class="card-header bg-light border-bottom py-3">
-                            <h5 class="mb-0 fw-bold">
-                                <i class="fas fa-quote-left text-info me-2"></i>
-                                Umpan Balik Guru
-                            </h5>
-                        </div>
-                        <div class="card-body p-4">
-                            <div class="d-flex">
-                                <div class="flex-shrink-0">
-                                    <i class="fas fa-user-circle fs-1 text-primary"></i>
+                    <div class="card-body p-4">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-user-circle fs-1 text-primary"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="fw-medium mb-2" id="teacher-name-feedback">...</div>
+                                <div class="bg-light p-3 rounded-3 border">
+                                    <p class="mb-0" id="teacher-feedback">...</p>
                                 </div>
-                                <div class="flex-grow-1 ms-3">
-                                    <div class="fw-medium mb-2" id="teacher-name-feedback">...</div>
-                                    <div class="bg-light p-3 rounded-3">
-                                        <p class="mb-0" id="teacher-feedback">...</p>
-                                    </div>
-                                    <div class="mt-3" id="learning-recommendations-container" style="display: none;">
-                                        <h6 class="small fw-bold text-primary mb-2">📚 Rekomendasi Pembelajaran:</h6>
-                                        <div class="d-flex flex-wrap gap-2" id="learning-recommendations">
-                                        </div>
-                                    </div>
+                                <div class="mt-3" id="learning-recommendations-container" style="display: none;">
+                                    <h6 class="small fw-bold text-primary mb-2">📚 Rekomendasi Pembelajaran:</h6>
+                                    <div class="d-flex flex-wrap gap-2" id="learning-recommendations"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white border-bottom py-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0 fw-bold">
-                                    <i class="fas fa-list-check text-primary me-2"></i>
-                                    Rincian Jawaban per Soal (<span id="answers-count">0</span>)
-                                </h5>
-                                <div class="btn-group btn-group-sm no-print">
-                                    <button class="btn btn-outline-secondary" id="expand-all">
-                                        <i class="fas fa-expand-arrows-alt"></i> Buka Semua
-                                    </button>
-                                    <button class="btn btn-outline-secondary" id="collapse-all">
-                                        <i class="fas fa-compress-arrows-alt"></i> Tutup Semua
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="accordion accordion-flush" id="answerAccordion">
+                {{-- Rincian Jawaban --}}
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="fas fa-list-check text-primary me-2"></i>Rincian Jawaban (<span id="answers-count">0</span>)
+                        </h5>
+                        <div class="btn-group btn-group-sm no-print">
+                            <button class="btn btn-outline-secondary" id="expand-all"><i class="fas fa-expand-arrows-alt"></i> Buka</button>
+                            <button class="btn btn-outline-secondary" id="collapse-all"><i class="fas fa-compress-arrows-alt"></i> Tutup</button>
                         </div>
                     </div>
+                    <div class="accordion accordion-flush" id="answerAccordion"></div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 @endsection
 
-{{-- CSS Kustom dipindahkan ke file .css terpisah, tapi jika Anda mau, bisa ditempel di sini --}}
-{{-- <style> ... </style> --}}
-
 @push('scripts')
-    <script>
-        $(document).ready(function() {
+<script>
+    $(document).ready(function() {
+        // ============================================
+        // 1. CONFIG & VARIABEL
+        // ============================================
+        const submissionId = "{{ $submission->id ?? 1 }}";
+        const API_URL = `/api/submissions/${submissionId}/report`;
 
-            // ============================================
-            // KONFIGURASI & VARIABEL GLOBAL
-            // ============================================
-            const submissionId = 1; // Anda bisa ganti ini dengan {{ $submission->id ?? 1 }}
-            const API_URL = `/api/submissions/${submissionId}/report`;
+        let competencyRadarChart = null;
+        let questionTypeDoughnutChart = null;
 
-            let competencyRadarChart = null;
-            let questionTypeDoughnutChart = null;
+        // ============================================
+        // 2. HELPER FUNCTIONS
+        // ============================================
 
-            // ============================================
-            // DATA DUMMY (HARDCODED) UNTUK CHARTS
-            // ============================================
-            const hardcodedReportData = {
-                competencies: [{
-                        name: 'Memahami Struktur Sel',
-                        description: 'Kemampuan mengidentifikasi dan menjelaskan fungsi organel sel',
-                        score_awarded: 28.0,
-                        max_score: 30.0,
-                        percentage: 93.3,
-                        level: 'Sangat Baik'
-                    },
-                    {
-                        name: 'Analisis Proses Fotosintesis',
-                        description: 'Kemampuan menganalisis tahapan dan faktor fotosintesis',
-                        score_awarded: 40.5,
-                        max_score: 50.0,
-                        percentage: 81.0,
-                        level: 'Baik'
-                    },
-                    {
-                        name: 'Keterampilan Menulis Ilmiah',
-                        description: 'Kemampuan menyusun jawaban dengan tata bahasa yang runut',
-                        score_awarded: 14.0,
-                        max_score: 20.0,
-                        percentage: 70.0,
-                        level: 'Cukup'
-                    }
-                ],
-                questionTypes: {
-                    'multiple_choice': {
-                        scored: 23,
-                        max: 25,
-                        percentage: 92.0,
-                        label: 'Pilihan Ganda'
-                    },
-                    'essay': {
-                        scored: 39,
-                        max: 50,
-                        percentage: 78.0,
-                        label: 'Esai'
-                    },
-                    'short_answer': {
-                        scored: 20,
-                        max: 25,
-                        percentage: 80.0,
-                        label: 'Isian Singkat'
-                    }
-                }
+        // Fungsi format tanggal aman
+        const formatDate = (d) => {
+            if (!d) return '-';
+            try {
+                return new Date(d).toLocaleString('id-ID', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return d;
+            }
+        };
+
+        // Fungsi format durasi
+        const formatDuration = (s) => {
+            if (!s && s !== 0) return '-';
+            const min = Math.floor(s / 60);
+            const sec = s % 60;
+            return `${min}m ${sec}s`;
+        };
+
+        // Fungsi warna nilai
+        const getGradeStyle = (grade) => {
+            const g = parseFloat(grade) || 0;
+            if (g >= 90) return {
+                color: '#28a745',
+                class: 'bg-success',
+                cat: 'Sangat Baik'
+            }; // Hijau
+            if (g >= 75) return {
+                color: '#17a2b8',
+                class: 'bg-info',
+                cat: 'Baik'
+            }; // Biru
+            if (g >= 60) return {
+                color: '#ffc107',
+                class: 'bg-warning',
+                cat: 'Cukup'
+            }; // Kuning
+            return {
+                color: '#dc3545',
+                class: 'bg-danger',
+                cat: 'Perlu Perbaikan'
+            }; // Merah
+        };
+
+        // Label Tipe Tugas
+        const getTaskTypeLabel = (type) => {
+            const types = {
+                'quiz': 'Kuis',
+                'exam': 'Ujian',
+                'task': 'Tugas'
             };
+            return types[type] || 'Tugas';
+        };
 
-            // ============================================
-            // FUNGSI HELPER
-            // ============================================
-            const formatDate = (d) => !d ? 'N/A' : new Date(d).toLocaleString('id-ID', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            const formatDuration = (s) => !s && s !== 0 ? 'N/A' : `${Math.floor(s/60)}m ${s%60}s`;
-            const printReport = () => window.print();
-            const expandAll = () => $('.accordion-collapse').collapse('show');
-            const collapseAll = () => $('.accordion-collapse').collapse('hide');
-
-            const getGradeStyle = (grade) => {
-                // Parsing nilai ke float untuk perbandingan
-                const g = parseFloat(grade) || 0;
-                if (g >= 90) return {
-                    color: '#28a745',
-                    class: 'bg-success',
-                    cat: 'Baik Sekali'
-                };
-                if (g >= 85) return {
-                    color: '#6C757D',
-                    class: 'bg-secondary',
-                    cat: 'Baik Sekali'
-                };
-                if (g >= 70) return {
-                    color: '#17a2b8',
-                    class: 'bg-info',
-                    cat: 'Baik'
-                };
-                if (g >= 60) return {
-                    color: '#ffc107',
-                    class: 'bg-warning',
-                    cat: 'Cukup'
-                };
-                return {
-                    color: '#dc3545',
-                    class: 'bg-danger',
-                    cat: 'Perlu Perbaikan'
-                };
-            };
-
-            // --- PERBAIKAN 1 ---
-            // Helper untuk Tipe TUGAS (Task, Quiz, Exam) - Digunakan di header
-            // Sesuai dengan migrasi: tasks.type
-            const getTaskTypeLabel = (type) => {
-                if (type === 'quiz') return 'Kuis';
-                if (type === 'exam') return 'Ujian';
-                // Defaultnya 'task' atau lainnya
-                return 'Tugas';
-            };
-
-            // --- PERBAIKAN 2 ---
-            // Helper untuk Tipe SOAL (Multiple Choice, Essay, etc.) - Digunakan di accordion
-            // Sesuai dengan migrasi: questions.type DAN data API Anda
-            const getQuestionTypeVisuals = (type) => {
-                if (type === 'multiple_choice') return {
+        // Ikon Tipe Soal
+        const getQuestionTypeVisuals = (type) => {
+            const visuals = {
+                'multiple_choice': {
                     label: 'Pilihan Ganda',
                     icon: 'fas fa-tasks'
-                };
-                if (type === 'essay') return {
+                },
+                'essay': {
                     label: 'Esai',
                     icon: 'fas fa-file-alt'
-                };
-                if (type === 'short_answer') return {
+                },
+                'short_answer': {
                     label: 'Isian Singkat',
                     icon: 'fas fa-keyboard'
-                };
-                if (type === 'true_false') return {
+                },
+                'true_false': {
                     label: 'Benar/Salah',
                     icon: 'fas fa-toggle-on'
-                };
-                if (type === 'matching') return {
-                    label: 'Menjodohkan',
-                    icon: 'fas fa-equals'
-                };
-                // Fallback
-                return {
-                    label: type,
-                    icon: 'fas fa-question-circle'
-                };
+                }
             };
+            return visuals[type] || {
+                label: type || 'Soal',
+                icon: 'fas fa-question-circle'
+            };
+        };
 
-            // ============================================
-            // FUNGSI RENDER (DINAMIS DARI API)
-            // ============================================
+        // ============================================
+        // 3. FUNGSI RENDER (UI)
+        // ============================================
 
-            function renderBasicInfo(submission, answers, recommendations) {
-                const s = submission;
-                const g = parseFloat(s.final_grade) || 0;
-                const style = getGradeStyle(g);
+        function renderBasicInfo(s, answers, recommendations) {
+            if (!s) return;
 
-                // Info Siswa
-                $('#student-name').text(s.student_name);
-                $('#student-nis').text(s.student_nis);
-                $('#student-class').text(s.class_name);
-                $('#student-email').text(s.email);
-                $('#academic-year').text(s.academic_year || '2024/2025');
-                $('#semester').text(s.semester || 'Ganjil');
+            const g = parseFloat(s.final_grade) || 0;
+            const style = getGradeStyle(g);
 
-                // Info Tugas: Menggunakan helper getTaskTypeLabel
-                $('#task-title').text(s.task_title);
-                $('#task-type').text(getTaskTypeLabel(s.task_type)); // <-- PERBAIKAN DI SINI
-                $('#subject-name').text(s.subject_name);
-                $('#task-description').text(s.task_description || 'Analisis laporan tugas siswa.');
+            // --- Header & Profil ---
+            $('#student-name').text(s.student_name || '-');
+            $('#student-nis').text(s.student_nis || '-');
+            $('#student-class').text(s.class_name || '-');
+            $('#student-email').text(s.email || '-');
+            $('#subject-name').text(s.subject_name || '-');
+            $('#task-title').text(s.task_title || '-');
+            $('#task-type').text(getTaskTypeLabel(s.task_type));
+            $('#task-description').text(s.task_description || 'Laporan hasil pengerjaan.');
 
-                // Statistik Pengerjaan
-                $('#duration').text(formatDuration(s.duration_seconds));
-                $('#submission-time').text(formatDate(s.submitted_at));
-                $('#answered-questions').text(`${answers.length} Soal`);
-                $('#teacher-name').text(s.teacher_name || 'AI Analyzer');
+            // --- Statistik ---
+            $('#duration').text(formatDuration(s.duration_seconds));
+            $('#submission-time').text(formatDate(s.submitted_at));
+            $('#answered-questions').text(Array.isArray(answers) ? answers.length : 0);
+            $('#teacher-name').text(s.teacher_name || '-');
+            $('#academic-year').text(s.created_at ? new Date(s.created_at).getFullYear() : '-');
+            $('#semester').text('-');
 
-                if (s.is_late) {
-                    $('#late-status').text(s.late_info || 'Terlambat');
-                    $('#late-card').removeClass('d-none');
-                }
+            // --- Status Terlambat ---
+            if (s.is_late) {
+                $('#late-status').text(s.late_info || 'Terlambat');
+                $('#late-card').removeClass('d-none');
+            } else {
+                $('#late-card').addClass('d-none');
+            }
 
-                // Nilai Utama
-                $('#final-grade').text(g.toFixed(1)).css('color', style.color);
-                $('#grade-progress').removeClass('bg-success bg-info bg-warning bg-danger bg-purple').addClass(style
-                    .class).css('width', g + '%');
+            // --- Nilai Utama ---
+            $('#final-grade').text(g.toFixed(0)).css('color', style.color);
+            $('#grade-progress').attr('class', 'progress-bar ' + style.class).css('width', g + '%');
+            $('#performance-category').text(style.cat).attr('class', 'badge fs-6 px-4 py-2 ' + style.class);
+            $('#rank-info').text(s.rank ? `Peringkat ${s.rank}` : 'Peringkat -');
+            $('#class-average').text(s.class_average ? `Rata-rata: ${s.class_average}` : '');
 
-                // Kategori Performa
-                $('#performance-category').text(style.cat).removeClass(
-                    'bg-success bg-info bg-warning bg-danger bg-purple').addClass(style.class);
-                $('#rank-info').text(`Peringkat ${s.rank || '-'} dari ${s.total_students || '-'} siswa`);
-                $('#class-average').text(`Rata-rata kelas: ${s.class_average || '-'}`);
+            // ============================================================
+            // PERBAIKAN DI SINI: LOGIKA UMPAN BALIK (FEEDBACK)
+            // ============================================================
 
-                // Umpan Balik Guru (jika ada)
-                if (s.teacher_comment) {
-                    $('#teacher-name-feedback').text(`${s.teacher_name || 'Guru'} - ${formatDate(s.graded_at)}`);
-                    $('#teacher-feedback').text(s.teacher_comment);
-                    $('#teacher-feedback-card').show();
-                }
+            // 1. Coba ambil dari submission (General)
+            let finalFeedback = s.teacher_feedback;
 
-                // Rekomendasi Pembelajaran (jika ada)
-                if (recommendations && recommendations.length > 0) {
-                    const $recContainer = $('#learning-recommendations').empty();
-                    recommendations.forEach(rec => {
-                        $recContainer.append(
-                            `<span class="badge bg-primary bg-opacity-10 text-primary">${rec}</span>`);
-                    });
-                    $('#learning-recommendations-container').show();
-                    $('#teacher-feedback-card').show();
+            // 2. Jika kosong, cari komentar dari array 'answers'
+            if (!finalFeedback && Array.isArray(answers) && answers.length > 0) {
+                // Strategi: Kita gabungkan semua komentar guru yang ada di setiap soal
+                // atau ambil yang pertama ditemukan.
+
+                // Opsi A: Gabungkan semua komentar (jika ada banyak soal)
+                const comments = answers
+                    .filter(a => a.teacher_comment) // Filter yang punya komentar
+                    .map(a => a.teacher_comment); // Ambil teksnya
+
+                if (comments.length > 0) {
+                    // Gabungkan dengan baris baru agar rapi
+                    finalFeedback = comments.join('<br><br>');
                 }
             }
 
-            /**
-             * Render Rincian Jawaban (Accordion) dari API
-             */
-            function renderAnswerDetails(answers) {
-                const $container = $('#answerAccordion').empty();
-                $('#answers-count').text(answers.length);
+            const hasFeedback = finalFeedback != null && finalFeedback !== '';
+            const hasRecs = recommendations && recommendations.length > 0;
 
-                if (!answers || !answers.length) {
-                    $container.html('<div class="p-4 text-center text-muted">Tidak ada rincian jawaban.</div>');
-                    return;
+            if (hasFeedback || hasRecs) {
+                $('#teacher-feedback-card').show();
+                $('#teacher-name-feedback').text(s.teacher_name || 'Guru');
+
+                // Render Komentar Utama
+                if (hasFeedback) {
+                    $('#teacher-feedback').parent().show();
+                    // Gunakan .html() karena kita mungkin menggabungkan komentar dengan <br>
+                    $('#teacher-feedback').html(finalFeedback);
+                } else {
+                    $('#teacher-feedback').parent().hide();
                 }
 
-                answers.forEach((q, index) => {
-                    const scoreFinal = parseFloat(q.score_final) || 0;
-                    const maxScore = parseFloat(q.max_score) || 0;
-                    const percentage = q.percentage !== undefined ? parseFloat(q.percentage) : (maxScore >
-                        0 ? (scoreFinal / maxScore) * 100 : 0);
-                    const scoreAwarded = parseFloat(q.score_awarded) || 0;
-                    const questionPercentage = maxScore > 0 ? (scoreAwarded / maxScore) * 100 : 0;
-                    const style = getGradeStyle(questionPercentage);
+                // Render Rekomendasi
+                if (hasRecs) {
+                    $('#learning-recommendations-container').show();
+                    const $recParams = $('#learning-recommendations').empty();
+                    recommendations.forEach(r => {
+                        $recParams.append(`<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 py-2 px-3">${r}</span>`);
+                    });
+                } else {
+                    $('#learning-recommendations-container').hide();
+                }
+            } else {
+                $('#teacher-feedback-card').hide();
+            }
+        }
 
-                    // --- PERBAIKAN DI SINI ---
-                    // Menggunakan helper getQuestionTypeVisuals berdasarkan 'q.type' dari API
-                    const visuals = getQuestionTypeVisuals(q.type);
+        function renderCompetencyChart(competencies) {
+            if (!competencies || !Array.isArray(competencies)) return;
 
-                    let statusIcon = 'fas fa-times-circle';
-                    if (percentage >= 85) statusIcon = 'fas fa-check-circle';
-                    else if (percentage >= 60) statusIcon = 'fas fa-exclamation-circle';
+            const ctx = document.getElementById('competencyRadarChart');
+            if (!ctx) return;
 
-                    // --- HTML untuk Jawaban (Pilihan Ganda vs Esai) ---
-                    let answerHtml = '';
+            if (competencyRadarChart) competencyRadarChart.destroy();
 
-                    if (q.type === 'multiple_choice') {
-                        const isCorrect = q.is_correct == 1;
-                        const borderColor = isCorrect ? 'border-success' : 'border-danger';
-                        const iconClass = isCorrect ? 'fa-check-circle text-success' :
-                            'fa-times-circle text-danger';
+            // Data dari JSON (Meskipun isinya 0, tetap kita render)
+            const labels = competencies.map(c => c.name);
+            const dataValues = competencies.map(c => c.percentage);
 
-                        answerHtml = `
-                    <h6 class="small fw-bold text-muted mb-2">Jawaban Siswa:</h6>
-                    <div class="bg-light p-3 rounded border-start border-4 ${borderColor} mb-3">
-                        <p class="mb-0">
-                            <i class="fas ${iconClass} me-2"></i>
-                            ${q.selected_option || '(Tidak dijawab)'}
-                        </p>
-                    </div>`;
+            competencyRadarChart = new Chart(ctx.getContext('2d'), {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Pencapaian (%)',
+                        data: dataValues,
+                        backgroundColor: 'rgba(78, 115, 223, 0.2)',
+                        borderColor: 'rgba(78, 115, 223, 1)',
+                        pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 100,
+                            ticks: {
+                                stepSize: 20,
+                                backdropColor: 'transparent'
+                            },
+                            pointLabels: {
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
 
-                    } else {
-                        // Ini untuk 'short_answer' atau 'essay'
-                        answerHtml = `
-                    <h6 class="small fw-bold text-muted mb-2">Jawaban Siswa:</h6>
-                    <div class="bg-light p-3 rounded border-start border-4 border-primary mb-3">
-                        <p class="mb-0" style="white-space: pre-wrap;">${q.answer_text || '(Tidak dijawab)'} - ${questionPercentage}</p>
-                    </div>`;
+        function renderCompetencyDetails(competencies) {
+            const container = $('#competency-details').empty();
+            const insights = $('#competency-insights').empty();
+
+            if (!competencies || competencies.length === 0) {
+                container.html('<div class="text-muted text-center small">Tidak ada data kompetensi.</div>');
+                return;
+            }
+
+            competencies.forEach(c => {
+                const pct = parseFloat(c.percentage);
+                const style = getGradeStyle(pct);
+                // Ikon berdasarkan persentase
+                const icon = pct >= 75 ? 'far fa-smile' : (pct >= 60 ? 'far fa-meh' : 'far fa-frown');
+
+                container.append(`
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <div class="d-flex align-items-center" style="max-width: 80%;">
+                            <i class="${icon} text-${style.class.replace('bg-', '')} me-2"></i>
+                            <span class="fw-bold small text-truncate">${c.name}</span>
+                        </div>
+                        <span class="fw-bold small" style="color:${style.color}">${pct.toFixed(0)}%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar ${style.class}" style="width: ${pct}%"></div>
+                    </div>
+                    <small class="text-muted d-block mt-1 fst-italic" style="font-size: 0.75rem;">
+                        ${c.description || ''} (Level: ${c.level})
+                    </small>
+                </div>
+            `);
+
+                // Insight Sederhana
+                if (pct >= 85) insights.append(`<li><span class="text-success fw-bold">Kuat:</span> ${c.name}</li>`);
+                else if (pct <= 50) insights.append(`<li><span class="text-danger fw-bold">Perlu Review:</span> ${c.name}</li>`);
+            });
+
+            if (insights.children().length === 0) {
+                insights.append('<li>Siswa perlu meningkatkan pemahaman di seluruh kompetensi dasar.</li>');
+            }
+        }
+
+        function renderQuestionTypeChart(types) {
+            const ctx = document.getElementById('questionTypeChart');
+            if (!ctx || !types) return;
+
+            const labels = Object.values(types).map(t => t.label);
+            const data = Object.values(types).map(t => t.scored); // Gunakan scored
+
+            if (questionTypeDoughnutChart) questionTypeDoughnutChart.destroy();
+
+            questionTypeDoughnutChart = new Chart(ctx.getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderQuestionTypeDetails(types) {
+            const container = $('#question-type-details').empty();
+            const colors = ['primary', 'success', 'info'];
+            let i = 0;
+
+            if (!types) {
+                container.html('-');
+                return;
+            }
+
+            Object.values(types).forEach(t => {
+                const color = colors[i % colors.length];
+                container.append(`
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="small fw-medium">${t.label}</span>
+                        <span class="small fw-bold text-${color}">${parseFloat(t.percentage).toFixed(0)}%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-${color}" style="width: ${t.percentage}%"></div>
+                    </div>
+                    <div class="mt-1">
+                        <small class="text-muted" style="font-size: 10px;">Poin: ${t.scored}/${t.max}</small>
+                    </div>
+                </div>
+            `);
+                i++;
+            });
+        }
+
+        function renderAnswerDetails(answers) {
+            const container = $('#answerAccordion').empty();
+            $('#answers-count').text(answers ? answers.length : 0);
+
+            if (!answers || answers.length === 0) return;
+
+            answers.forEach((q, idx) => {
+                const style = getGradeStyle(q.percentage);
+                const visuals = getQuestionTypeVisuals(q.type);
+                const isEssay = (q.type === 'essay' || q.type === 'short_answer');
+
+                // Logika Tampilan Jawaban
+                let answerContent = '';
+
+                if (isEssay) {
+                    // Untuk Essay: Tampilkan teks jawaban
+                    answerContent = `
+                    <p class="mb-0 text-dark p-2 bg-white border rounded" style="white-space: pre-wrap;">${q.answer_text || '-'}</p>
+                `;
+                } else {
+                    // Untuk PG: Tampilkan badge Benar/Salah jika is_correct tidak null
+                    let badge = '';
+                    if (q.is_correct === true || q.is_correct === 1) {
+                        badge = '<span class="badge bg-success mb-2"><i class="fas fa-check me-1"></i> Benar</span>';
+                    } else if (q.is_correct === false || q.is_correct === 0) {
+                        badge = '<span class="badge bg-danger mb-2"><i class="fas fa-times me-1"></i> Salah</span>';
                     }
 
-                    // --- HTML untuk Umpan Balik ---
-                    const commentHtml = (q.teacher_comment || q.ai_feedback) ? `
-                <div class="alert alert-info border-0 border-start border-4 border-info mb-3">
-                    <h6 class="alert-heading small fw-bold mb-2">
-                        <i class="fas fa-comment-dots me-2"></i>Komentar Guru/AI:
-                    </h6>
-                    <p class="mb-0 small"><em>"${q.teacher_comment || q.ai_feedback}"</em></p>
-                </div>` : '';
+                    answerContent = `
+                    ${badge}
+                    <div class="p-2 bg-white border rounded fw-bold text-dark">
+                        ${q.selected_option || '<em class="text-muted">Tidak dijawab</em>'}
+                    </div>
+                `;
+                }
 
-                    // --- Gabungkan Semua ---
-                    $container.append(`
+                // Logika Tampilan Komentar Per Soal (PENTING: Ambil dari answers.teacher_comment)
+                const comment = q.teacher_comment || q.ai_feedback;
+                const feedbackHtml = comment ? `
+                <div class="mt-3 p-3 bg-info bg-opacity-10 border border-info border-opacity-25 rounded position-relative">
+                    <span class="position-absolute top-0 start-0 translate-middle badge rounded-pill bg-info">
+                        Guru
+                    </span>
+                    <p class="small mb-0 text-dark mt-1">
+                        <i class="fas fa-comment-dots me-1 text-info"></i> ${comment}
+                    </p>
+                </div>
+            ` : '';
+
+                container.append(`
                 <div class="accordion-item">
                     <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#answer${index}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#ans-${idx}">
                             <div class="d-flex align-items-center w-100 pe-3">
-                                <span class="question-status-badge ${style.class} text-white me-3">
-                                    ${index + 1}
-                                </span>
-                                <div class="flex-grow-1">
+                                <span class="badge ${style.class} me-3 shadow-sm" style="min-width: 30px;">${idx+1}</span>
+                                <div class="flex-grow-1 text-truncate">
                                     <div class="d-flex align-items-center mb-1">
-                                        <i class="${visuals.icon} text-primary me-2"></i>
-                                        <span class="badge bg-primary bg-opacity-10 text-primary small">${visuals.label}</span>
-                                        <span class="badge ${style.class} ms-2 small">
-                                            ${scoreFinal.toFixed(1)} / ${maxScore} poin
+                                        <i class="${visuals.icon} text-secondary me-2 small"></i>
+                                        <small class="text-muted me-2">${visuals.label}</small>
+                                        <span class="fw-bold small text-${style.class.replace('bg-', '')}">
+                                            ${parseFloat(q.score_final)} / ${parseFloat(q.max_score)} Poin
                                         </span>
                                     </div>
-                                    <div class="fw-medium text-dark small">${q.question_text}</div>
+                                    <div class="fw-medium text-dark small text-truncate" style="max-width: 90%;">
+                                        ${q.question_text}
+                                    </div>
                                 </div>
-                                <i class="${statusIcon} text-${style.color} fs-4 ms-3"></i>
                             </div>
                         </button>
                     </h2>
-                    <div id="answer${index}" class="accordion-collapse collapse" data-bs-parent="#answerAccordion">
-                        <div class="accordion-body">
-                            ${answerHtml}
-                            ${commentHtml}
+                    <div id="ans-${idx}" class="accordion-collapse collapse" data-bs-parent="#answerAccordion">
+                        <div class="accordion-body bg-light">
+                            <div class="mb-3">
+                                <label class="small text-muted fw-bold mb-1">Pertanyaan:</label>
+                                <p class="mb-0 text-dark bg-white p-2 rounded border">${q.question_text}</p>
+                            </div>
+                            
+                            <div class="mb-0">
+                                <label class="small text-muted fw-bold mb-1">Jawaban Siswa:</label>
+                                ${answerContent}
+                            </div>
+                            
+                            ${feedbackHtml}
                         </div>
                     </div>
                 </div>
             `);
-                });
-            }
+            });
+        }
 
-            // ============================================
-            // FUNGSI RENDER (HARDCODED UNTUK CHARTS)
-            // ============================================
+        // ============================================
+        // 4. MAIN LOAD LOGIC
+        // ============================================
 
-            function renderCompetencyChart() {
-                const ctx = document.getElementById('competencyRadarChart').getContext('2d');
-                const competencies = hardcodedReportData.competencies;
-                if (competencyRadarChart) competencyRadarChart.destroy();
-                competencyRadarChart = new Chart(ctx, {
-                    type: 'radar',
-                    data: {
-                        labels: competencies.map(c => c.name),
-                        datasets: [{
-                            label: 'Pencapaian Siswa (%)',
-                            data: competencies.map(c => c.percentage),
-                            backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                            borderColor: 'rgba(102, 126, 234, 1)',
-                            borderWidth: 2,
-                            pointRadius: 5
-                        }, {
-                            label: 'Target Minimal (75%)',
-                            data: competencies.map(() => 75),
-                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                            borderColor: 'rgba(40, 167, 69, 0.5)',
-                            borderWidth: 2,
-                            borderDash: [5, 5],
-                            pointRadius: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            r: {
-                                min: 0,
-                                max: 100,
-                                ticks: {
-                                    stepSize: 20,
-                                    callback: (v) => v + '%'
-                                },
-                                pointLabels: {
-                                    font: {
-                                        size: 11,
-                                        weight: 'bold'
-                                    }
-                                }
-                            }
-                        },
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    padding: 15,
-                                    usePointStyle: true
-                                }
-                            }
-                        }
-                    }
-                });
-            }
+        // Tampilkan pesan error jika AJAX gagal
+        const showError = (msg) => {
+            $('#loading-spinner').hide();
+            $('#report-content').html(`
+            <div class="alert alert-danger m-4" role="alert">
+                <i class="fas fa-exclamation-triangle me-2"></i> ${msg}
+            </div>
+        `).show();
+        };
 
-            function renderCompetencyDetails() {
-                const container = document.getElementById('competency-details');
-                const insightsContainer = document.getElementById('competency-insights');
-                container.innerHTML = '';
-                insightsContainer.innerHTML = '';
+        $.ajax({
+            url: API_URL,
+            method: 'GET',
+            dataType: 'json',
+            success: (res) => {
+                // Debugging: Cek data di console
+                console.log("API Response:", res);
 
-                hardcodedReportData.competencies.forEach(comp => {
-                    const percentage = comp.percentage;
-                    let style = getGradeStyle(percentage);
-                    let icon = 'far fa-frown';
-                    if (percentage >= 85) icon = 'far fa-smile';
-                    else if (percentage >= 70) icon = 'far fa-meh';
+                try {
+                    if (res.success && res.data) {
+                        const d = res.data;
 
-                    container.innerHTML += `
-                <div class="competency-item p-3 mb-3 border rounded">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                        <div class="flex-grow-1">
-                            <div class="d-flex align-items-center mb-1">
-                                <i class="${icon} text-${style.class.replace('bg-', '')} me-2 fs-5"></i>
-                                <h6 class="mb-0 fw-bold">${comp.name}</h6>
-                            </div>
-                            <p class="text-muted small mb-2">${comp.description}</p>
-                        </div>
-                        <div class="text-end ms-3">
-                            <div class="fw-bold fs-5" style="color:${style.color}">${percentage.toFixed(1)}%</div>
-                            <small class="text-muted">${comp.score_awarded.toFixed(1)}/${comp.max_score.toFixed(1)}</small>
-                        </div>
-                    </div>
-                    <div class="progress" style="height: 12px;"><div class="progress-bar ${style.class}" style="width: ${percentage}%"></div></div>
-                    <div class="mt-2"><span class="badge ${style.class} bg-opacity-10 text-${style.class.replace('bg-', '')} small">${comp.level}</span></div>
-                </div>`;
+                        renderBasicInfo(d.submission, d.answers, d.recommendations);
+                        renderCompetencyChart(d.competencies);
+                        renderCompetencyDetails(d.competencies);
+                        renderQuestionTypeChart(d.questionTypes);
+                        renderQuestionTypeDetails(d.questionTypes);
+                        renderAnswerDetails(d.answers);
 
-                    if (percentage >= 90) insightsContainer.innerHTML +=
-                        `<li><strong>Kekuatan:</strong> ${comp.name} (${percentage.toFixed(1)}%)</li>`;
-                    if (percentage < 70) insightsContainer.innerHTML +=
-                        `<li><strong>Perlu Ditingkatkan:</strong> ${comp.name} (${percentage.toFixed(1)}%)</li>`;
-                });
-            }
-
-            function renderQuestionTypeChart() {
-                const ctx = document.getElementById('questionTypeChart').getContext('2d');
-                const types = hardcodedReportData.questionTypes;
-                if (questionTypeDoughnutChart) questionTypeDoughnutChart.destroy();
-                questionTypeDoughnutChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: Object.values(types).map(t => t.label),
-                        datasets: [{
-                            data: Object.values(types).map(t => t.scored),
-                            backgroundColor: ['rgba(40, 167, 69, 0.8)', 'rgba(255, 193, 7, 0.8)',
-                                'rgba(23, 162, 184, 0.8)'
-                            ],
-                            borderWidth: 2,
-                            borderColor: '#fff'
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    padding: 10,
-                                    usePointStyle: true,
-                                    font: {
-                                        size: 11
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-
-            function renderQuestionTypeDetails() {
-                const container = document.getElementById('question-type-details');
-                container.innerHTML = '';
-                const types = hardcodedReportData.questionTypes;
-
-                const colors = {
-                    'multiple_choice': 'success',
-                    'essay': 'warning',
-                    'short_answer': 'info'
-                };
-
-                for (const key in types) {
-                    const type = types[key];
-                    const color = colors[key] || 'secondary';
-                    container.innerHTML += `
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="small fw-medium">${type.label}</span>
-                        <span class="small fw-bold text-${color}">${type.percentage.toFixed(1)}%</span>
-                    </div>
-                    <div class="progress" style="height: 8px;">
-                        <div class="progress-bar bg-${color}" style="width: ${type.percentage}%"></div>
-                    </div>
-                    <small class="text-muted">${type.scored.toFixed(1)}/${type.max.toFixed(1)} poin</small>
-                </div>
-            `;
-                }
-            }
-
-            // ============================================
-            // FUNGSI LOAD DATA (AJAX)
-            // ============================================
-            const loadReport = () => {
-                $.ajax({
-                    url: API_URL,
-                    method: 'GET',
-                    beforeSend: () => {
-                        $('#loading-spinner').show();
-                        $('#report-content').hide();
-                    },
-                    success: (res) => {
-                        if (res.data) {
-                            // Panggil fungsi render dinamis
-                            renderBasicInfo(res.data.submission, res.data.answers, res.data
-                                .recommendations);
-                            renderAnswerDetails(res.data.answers);
-
-                            // Panggil fungsi render hardcoded (sesuai permintaan)
-                            renderCompetencyChart();
-                            renderCompetencyDetails();
-                            renderQuestionTypeChart();
-                            renderQuestionTypeDetails();
-                        } else {
-                            $('#loading-spinner').html(
-                                `<div class="alert alert-warning">Data laporan tidak ditemukan.</div>`
-                                );
-                        }
-                    },
-                    error: (xhr, status, error) => {
-                        console.error("AJAX Error:", status, error);
-                        console.error("Response Text:", xhr.responseText);
-                        $('#loading-spinner').html(
-                            `<div class="alert alert-danger">Gagal memuat: ${error}. Cek console (F12) untuk detail.</div>`
-                            );
-                    },
-                    complete: () => {
-                        if (!$('#loading-spinner .alert').length) {
-                            $('#loading-spinner').fadeOut();
+                        $('#loading-spinner').fadeOut(300, () => {
                             $('#report-content').fadeIn();
-                        }
+                        });
+                    } else {
+                        showError("Format data API tidak valid.");
                     }
-                });
-            };
-
-            // ============================================
-            // INISIALISASI HALAMAN
-            // ============================================
-
-            loadReport();
-
-            // Pasang Event Listeners
-            $('#print-btn').on('click', printReport);
-            $('#expand-all').on('click', expandAll);
-            $('#collapse-all').on('click', collapseAll);
+                } catch (err) {
+                    console.error(err);
+                    showError("Terjadi kesalahan script saat menampilkan data.");
+                }
+            },
+            error: (xhr) => {
+                console.error(xhr);
+                showError(`Gagal memuat data (Status: ${xhr.status})`);
+            }
         });
-    </script>
+
+        // Event Listeners
+        $('#print-btn').on('click', () => window.print());
+        $('#expand-all').on('click', () => $('.accordion-collapse').collapse('show'));
+        $('#collapse-all').on('click', () => $('.accordion-collapse').collapse('hide'));
+    });
+</script>
 @endpush
