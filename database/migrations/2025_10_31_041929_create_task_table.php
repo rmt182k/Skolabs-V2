@@ -164,7 +164,7 @@ return new class extends Migration {
             $table->id();
             $table->unsignedBigInteger('task_submission_id');
             $table->unsignedBigInteger('competency_id')->nullable()->comment('Kompetensi yang perlu ditingkatkan');
-            $table->enum('type', ['material', 'video', 'exercise', 'reading', 'practice'])->comment('Jenis rekomendasi');
+            $table->string('type')->comment('Jenis rekomendasi');
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('url')->nullable()->comment('Link ke resource');

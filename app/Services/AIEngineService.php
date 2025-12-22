@@ -260,19 +260,37 @@ class AIEngineService
 
         $prompt .= "DETAIL JAWABAN SISWA:\n";
         foreach ($answers as $idx => $ans) {
-            $status = $ans->is_correct ? "Benar" : "Salah";
+            $scoreAwarded = 0 + $ans->score_awarded;
+            $maxScore = 0 + $ans->max_score;
+
+            // FIX: Handle jika is_correct NULL. Cek jika Full Score maka BENAR.
+            $isCorrect = ($ans->is_correct == 1) || ($maxScore > 0 && $scoreAwarded == $maxScore);
+            $status = $isCorrect ? "Benar" : "Salah";
+
             $prompt .= "Q" . ($idx + 1) . ": {$ans->question_text}\n";
+            if (!empty($ans->explanation)) {
+                $prompt .= "Pembahasan/Kunci: {$ans->explanation}\n";
+            }
             $prompt .= "Ans: " . ($ans->answer_text ?? $ans->selected_option ?? '-') . "\n";
-            $prompt .= "Score: {$ans->score_awarded}/{$ans->max_score} ({$status})\n\n";
+            $prompt .= "STATUS: {$status} | SCORE: {$scoreAwarded} (Max: {$maxScore})\n\n";
         }
 
         $prompt .= "INSTRUKSI OUTPUT (WAJIB JSON MURNI TANPA MARKDOWN):\n";
-        $prompt .= "Analisis data di atas. Identifikasi 3-5 Kompetensi Utama. Berikan skor penguasaan (0-100) per kompetensi berdasarkan jawaban siswa.\n";
+        $prompt .= "Analisis data di atas. Identifikasi 3-5 Kompetensi Utama.\n";
+
+        $prompt .= "UNTUK SETIAP KOMPETENSI, HITUNG SCORE DENGAN RUMUS SEDERHANA:\n";
+        $prompt .= "1. Hitung jumlah soal dalam kompetensi tersebut (Total Soal).\n";
+        $prompt .= "2. Hitung jumlah soal dengan STATUS 'Benar' (Jumlah Benar).\n";
+        $prompt .= "3. Score = (Jumlah Benar / Total Soal) * 100.\n";
+        $prompt .= "CONTOH: Ada 2 soal untuk kompetensi A. Satu Benar, Satu Salah. Maka (1/2)*100 = 50.\n";
+        $prompt .= "JANGAN GUNAKAN LOGIKA LAIN. HANYA HITUNG JUMLAH 'STATUS: Benar'.\n";
+
         $prompt .= "Format JSON:\n";
         $prompt .= "{\n";
-        $prompt .= '  "competencies": [{ "name": "Nama Kompetensi", "description": "Deskripsi singkat", "score_percentage": 85 }],' . "\n";
+        $prompt .= '  "competencies": [{ "name": "Nama Kompetensi", "description": "Deskripsi singkat", "score_percentage": 50 }],' . "\n";
         $prompt .= '  "recommendations": [{ "title": "Judul Saran", "description": "Isi saran", "priority": "high/medium/low", "type": "material" }]' . "\n";
         $prompt .= "}\n";
+        $prompt .= "CATATAN PENTING: Key 'score_percentage' HARUS berupa ANGKA (integer/float) saja. JANGAN pakai tanda persen (%).\n";
 
         return $prompt;
     }
@@ -304,14 +322,23 @@ class AIEngineService
 
     private function parseReportResponse($jsonText)
     {
-        // Bersihkan formatting markdown jika AI menambahkan ```json
-        $cleanJson = str_replace(['```json', '```'], '', $jsonText);
-        $data = json_decode($cleanJson, true);
+        // 1. Coba bersihkan markdown formatting standar
+        $cleanText = str_replace(['```json', '```'], '', $jsonText);
+        $data = json_decode($cleanText, true);
 
+        // 2. Jika gagal, coba ekstrak konten JSON dengan Regex (cari kurung kurawal terluar)
         if (json_last_error() !== JSON_ERROR_NONE) {
+            preg_match('/\{[\s\S]*\}/', $jsonText, $matches);
+            if (!empty($matches[0])) {
+                $data = json_decode($matches[0], true);
+            }
+        }
+
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($data)) {
             Log::error("JSON Parse Error: " . json_last_error_msg() . " | Raw: " . $jsonText);
             return null;
         }
+
         return $data;
     }
 }

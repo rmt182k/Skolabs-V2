@@ -23,6 +23,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TaskSubmissionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserManagementController;
+use App\Services\ReportGeneratorService;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -213,7 +214,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // REPORT
     Route::get('/submissions/{submission_id}/report', [ReportController::class, 'index']);
-    Route::post('/api/submissions/{submission_id}/report/generate', [AssessmentReportController::class, 'generate']);
+    Route::post('/api/submissions/{submission_id}/report/generate', [ReportGeneratorService::class, 'generateStudentReport']);
     Route::get('/api/submissions/{submission_id}/report', [AssessmentReportController::class, 'getStudentReport']);
 
     // TEST AI

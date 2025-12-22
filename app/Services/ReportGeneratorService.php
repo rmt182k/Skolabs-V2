@@ -84,10 +84,26 @@ class ReportGeneratorService
                     }
 
                     // B. Simpan Skor Kompetensi (AI memberikan nilai 0-100)
+                    // DEBUG: Log data kompetensi raw dari AI
+                    Log::info("AI Competency Data Item:", $compData);
+
+                    // Robustness: Handle key variations & sanitization
+                    $rawValue = $compData['score_percentage']
+                        ?? $compData['score']
+                        ?? $compData['percentage']
+                        ?? $compData['nilai']
+                        ?? 0;
+
+                    // Bersihkan non-numeric (misal AI kirim "85%")
+                    $cleanScore = floatval(preg_replace('/[^0-9.]/', '', (string)$rawValue));
+
+                    // Cap 0-100
+                    $finalScore = min(max($cleanScore, 0), 100);
+
                     DB::table('submission_competency_scores')->insert([
                         'submission_statistic_id' => $statId,
                         'competency_id' => $compId,
-                        'score' => $compData['score_percentage'], // Skor langsung dari AI
+                        'score' => $finalScore,
                         'created_at' => now(),
                         'updated_at' => now()
                     ]);
@@ -145,6 +161,7 @@ class ReportGeneratorService
             ->where('tsa.task_submission_id', $submissionId)
             ->select(
                 'q.question_text',
+                'q.explanation', // Tambahkan explanation untuk konteks AI
                 'q.type',
                 'q.score as max_score',
                 'tsa.answer_text',
