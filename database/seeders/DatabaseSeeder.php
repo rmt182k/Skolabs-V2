@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         // 2. Menu (Punya Kamu)
         $this->call(MenuSeeder::class);
         $this->call(AdminAccessSeeder::class);
+        $this->call(TeacherAccessSeeder::class);
 
         // 3. Master Data (Baru)
         $this->call(MasterDataSeeder::class);
