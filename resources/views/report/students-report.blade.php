@@ -25,7 +25,7 @@
                 <i class="fas fa-print me-2"></i>Cetak
             </button>
             {{-- ID submission dinamis --}}
-            <a href="/api/export/submission/{{ $submission->id ?? 1 }}/pdf" class="btn btn-outline-success">
+            <a href="/api/export/submission/{{ $submission_id }}/pdf" class="btn btn-outline-success">
                 <i class="fas fa-file-pdf me-2"></i>Export PDF
             </a>
         </div>
@@ -254,7 +254,7 @@
         // ============================================
         // 1. CONFIG & VARIABEL
         // ============================================
-        const submissionId = "{{ $submission->id ?? 1 }}";
+        const submissionId = "{{ $submission_id }}";
         const API_URL = `/api/submissions/${submissionId}/report`;
 
         let competencyRadarChart = null;
