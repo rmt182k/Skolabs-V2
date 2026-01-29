@@ -482,12 +482,21 @@ class TaskSubmissionController extends Controller
                     'ts.teacher_feedback',
                     'u.name as student_name',
                     'ud.identity_number as student_nis',
-                    't.title as task_title'
+                    't.title as task_title',
+                    'ts.grading_started_at' // [BARU]
                 )
                 ->first();
             // ... (logika 404 dan formatting waktu Anda sudah OK) ...
             if (!$submission) {
                 return response()->json(['success' => false, 'message' => 'Submission tidak ditemukan.'], 404);
+            }
+
+            // [BARU] Set Grading Started At jika belum ada dan status siap dinilai
+            // Status yang dianggap siap dinilai: pending_review (AI selesai) atau submitted (jika manual tanpa AI)
+            if (is_null($submission->grading_started_at) && in_array($submission->status, ['pending_review', 'submitted', 'late'])) {
+                DB::table('task_submissions')
+                    ->where('id', $submission_id)
+                    ->update(['grading_started_at' => now()]);
             }
 
             // ... (Logika status text Anda, ubah sedikit untuk status baru) ...
@@ -622,6 +631,23 @@ class TaskSubmissionController extends Controller
             }
 
             // Update submission utama
+            // [BARU] Hitung durasi grading
+            $finishTime = DB::table('task_submissions')
+                ->where('id', $submission_id)
+                ->value('grading_started_at');
+
+            $gradingDuration = 0;
+            if ($finishTime) {
+                $start = Carbon::parse($finishTime);
+                $gradingDuration = abs($now->diffInSeconds($start));
+            }
+
+            // Jika sebelumnya sudah ada durasi (misal edit nilai), tambahkan?
+            // User request: "mencatat lama waktu guru saat menilai"
+            // Asumsi: timer berjalan dari pertama kali buka sampai save ini.
+            // Kita overwrite saja atau jika mau kumulatif harus ambil old value.
+            // Simpelnya: duration = now - grading_started_at.
+
             DB::table('task_submissions')
                 ->where('id', $submission_id)
                 ->update([
@@ -630,6 +656,7 @@ class TaskSubmissionController extends Controller
                     'status' => 'graded', // Status FINAL
                     'graded_by' => $gradedBy,
                     'graded_at' => $now,
+                    'grading_duration_seconds' => $gradingDuration, // [BARU]
                     'updated_at' => $now
                 ]);
 

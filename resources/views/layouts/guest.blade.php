@@ -35,10 +35,10 @@
 <body class="authentication-bg position-relative">
     @yield('content')
     <footer class="footer footer-alt">
-        2025 -
+        {{-- 2025 -
         <script>
             document.write(new Date().getFullYear())
-        </script> © RMTDEV - <a href="https://rmtdevbase.my.id/">rmtdevbase.my.id</a>
+        </script> © RMTDEV - <a href="https://rmtdevbase.my.id/">rmtdevbase.my.id</a> --}}
     </footer>
     <!-- Vendor js -->
     <script src="{{ asset('assets/js/vendor.min.js') }}"></script>
