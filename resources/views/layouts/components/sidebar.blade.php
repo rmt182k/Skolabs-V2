@@ -31,19 +31,19 @@
             <!-- Brand Logo -->
             <a href="#" class="logo logo-light">
                 <span class="logo-lg">
-                    <img src="assets/images/logo.png" alt="logo">
+                    <img src="{{ asset('skolabs.png') }}" style="width: 30%; height: 1%;" alt="logo">
                 </span>
                 <span class="logo-sm">
-                    <img src="assets/images/logo-sm.png" alt="small logo">
+                    <img src="{{ asset('skolabs.png') }}" style="width: 30%; height: 1%;" alt="small logo">
                 </span>
             </a>
 
             <a href="#" class="logo logo-dark">
                 <span class="logo-lg">
-                    <img src="assets/images/logo-dark.png" alt="dark logo">
+                    <img src="{{ asset('skolabs.png') }}" style="width: 30%; height: 1%;" alt="dark logo">
                 </span>
                 <span class="logo-sm">
-                    <img src="assets/images/logo-dark-sm.png" alt="small logo">
+                    <img src="{{ asset('skolabs.png') }}" style="width: 30%; height: 1%;" alt="small logo">
                 </span>
             </a>
 

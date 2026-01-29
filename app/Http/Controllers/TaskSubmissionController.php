@@ -252,7 +252,7 @@ class TaskSubmissionController extends Controller
             // [BARU] Validasi Durasi (Server-side)
             if ($task->duration_minutes) {
                 $startedAt = Carbon::parse($existingSubmission->started_at);
-                $allowedEndTime = $startedAt->copy()->addMinutes($task->duration_minutes)->addMinutes(2); // Buffer 2 menit untuk latensi
+                $allowedEndTime = $startedAt->copy()->addMinutes((int) $task->duration_minutes)->addMinutes(2); // Buffer 2 menit untuk latensi
 
                 if ($now->isAfter($allowedEndTime)) {
                     // Opsional: Bisa tolak atau terima tapi tandai telat
