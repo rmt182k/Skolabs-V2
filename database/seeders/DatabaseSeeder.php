@@ -28,5 +28,11 @@ class DatabaseSeeder extends Seeder
 
         // 5. Classes, Students, Schedules (Baru)
         $this->call(AcademicSeeder::class);
+
+        // 6. Task Demo (Baru)
+        $this->call(TaskDemoSeeder::class);
+
+        // 7. Student Access (Baru)
+        $this->call(StudentAccessSeeder::class);
     }
 }
