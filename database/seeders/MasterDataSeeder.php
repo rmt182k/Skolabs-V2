@@ -25,6 +25,7 @@ class MasterDataSeeder extends Seeder
         // 2. Educational Levels
         $levels = [
             ['name' => 'SD', 'duration_years' => 6, 'description' => 'Sekolah Dasar'],
+            ['name' => 'SMP', 'duration_years' => 3, 'description' => 'Sekolah Menengah Pertama'],
             ['name' => 'SMA', 'duration_years' => 3, 'description' => 'Sekolah Menengah Atas'],
             ['name' => 'SMK', 'duration_years' => 3, 'description' => 'Sekolah Menengah Kejuruan'],
         ];

@@ -101,7 +101,8 @@ class TaskSubmissionController extends Controller
                     'student_id',
                     'status',
                     'final_grade',
-                    'submitted_at'
+                    'submitted_at',
+                    'grading_duration_seconds' // [BARU]
                 )
                 ->get()
                 ->keyBy('student_id');
@@ -116,6 +117,14 @@ class TaskSubmissionController extends Controller
                     $student->score = $submission->final_grade;
                     $student->submitted_at_formatted = $submission->submitted_at ? Carbon::parse($submission->submitted_at)->format('d M Y, H:i') : 'N/A';
                     $student->status_raw = $submission->status;
+
+                    // [BARU] Format Durasi Penilaian
+                    $student->grading_duration_formatted = '-';
+                    if ($submission->grading_duration_seconds) {
+                        $minutes = floor($submission->grading_duration_seconds / 60);
+                        $seconds = $submission->grading_duration_seconds % 60;
+                        $student->grading_duration_formatted = "{$minutes}m {$seconds}s";
+                    }
 
                     switch ($submission->status) {
                         case 'submitted':
@@ -147,6 +156,7 @@ class TaskSubmissionController extends Controller
                     $student->score = null;
                     $student->submitted_at_formatted = '-';
                     $student->status_raw = 'not_submitted';
+                    $student->grading_duration_formatted = '-'; // [BARU]
 
                     if ($task->end_time && $now > Carbon::parse($task->end_time)) {
                         $student->status_pengerjaan = 'Tidak Mengerjakan (Ditutup)';
@@ -483,7 +493,8 @@ class TaskSubmissionController extends Controller
                     'u.name as student_name',
                     'ud.identity_number as student_nis',
                     't.title as task_title',
-                    'ts.grading_started_at' // [BARU]
+                    'ts.grading_started_at', // [BARU]
+                    'ts.grading_duration_seconds' // [BARU] Perlu diselect karena dipakai di logic bawah
                 )
                 ->first();
             // ... (logika 404 dan formatting waktu Anda sudah OK) ...
@@ -491,12 +502,21 @@ class TaskSubmissionController extends Controller
                 return response()->json(['success' => false, 'message' => 'Submission tidak ditemukan.'], 404);
             }
 
-            // [BARU] Set Grading Started At jika belum ada dan status siap dinilai
-            // Status yang dianggap siap dinilai: pending_review (AI selesai) atau submitted (jika manual tanpa AI)
-            if (is_null($submission->grading_started_at) && in_array($submission->status, ['pending_review', 'submitted', 'late'])) {
+            // [BARU] Set Grading Started At jika belum ada
+            if (is_null($submission->grading_started_at)) {
+                $startTime = now();
+
+                // Jika sudah ada durasi sebelumnya (misal edit nilai), mundurkan waktu mulai
+                if ($submission->grading_duration_seconds > 0) {
+                    $startTime = $startTime->subSeconds($submission->grading_duration_seconds);
+                }
+
                 DB::table('task_submissions')
                     ->where('id', $submission_id)
-                    ->update(['grading_started_at' => now()]);
+                    ->update(['grading_started_at' => $startTime]);
+
+                // Update variable object agar langsung reflektif di return JSON
+                $submission->grading_started_at = $startTime->toDateTimeString();
             }
 
             // ... (Logika status text Anda, ubah sedikit untuk status baru) ...

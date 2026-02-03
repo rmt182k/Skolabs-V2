@@ -119,6 +119,7 @@
                             <th>Nama Siswa</th>
                             <th style="width: 18%;">Status Pengerjaan</th>
                             <th style="width: 15%;">Waktu Submisi</th>
+                            <th style="width: 10%;">Durasi Penilaian</th> {{-- [BARU] --}}
                             <th style="width: 10%;" class="text-center">Nilai</th>
                             <th style="width: 15%;" class="text-center">Aksi</th> {{-- Lebar disesuaikan --}}
                         </tr>
@@ -214,6 +215,10 @@
                     data: 'submitted_at_formatted'
                 }, // Waktu Submisi
                 {
+                    data: 'grading_duration_formatted',
+                    className: 'text-center'
+                }, // [BARU] Durasi Penilaian
+                {
                     data: 'score'
                 }, // Nilai
                 {
@@ -235,8 +240,8 @@
                     }
                 },
                 {
-                    // ⭐ Kolom Nilai (index 5)
-                    targets: 5,
+                    // ⭐ Kolom Nilai (index 6 - GESER KARENA ADA DURASI)
+                    targets: 6,
                     className: 'text-center fw-bold',
                     render: function(data, type, row) {
                         if (row.status_raw === 'not_submitted') {
@@ -261,8 +266,8 @@
                     }
                 },
                 {
-                    // ⭐ [PERUBAIKAN BESAR] Kolom Aksi (index 6)
-                    targets: 6,
+                    // ⭐ [PERUBAIKAN BESAR] Kolom Aksi (index 7 - GESER KARENA ADA DURASI)
+                    targets: 7,
                     render: function(data, type, row) {
 
                         // Jika belum mengerjakan

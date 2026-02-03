@@ -17,6 +17,7 @@ class AcademicSeeder extends Seeder
         // Ambil ID referensi
         $academicYearId = DB::table('academic_years')->where('is_active', true)->value('id');
         $sdId = DB::table('educational_levels')->where('name', 'SD')->value('id');
+        $smpId = DB::table('educational_levels')->where('name', 'SMP')->value('id');
         $smaId = DB::table('educational_levels')->where('name', 'SMA')->value('id');
         $smkId = DB::table('educational_levels')->where('name', 'SMK')->value('id');
 
@@ -54,7 +55,21 @@ class AcademicSeeder extends Seeder
             }
         }
 
-        // 2. SMA
+        // 2. SMP
+        for ($grade = 7; $grade <= 9; $grade++) {
+            foreach (['A', 'B', 'C'] as $suffix) {
+                $classesToCreate[] = [
+                    'name' => "{$grade} SMP {$suffix}",
+                    'grade_level' => $grade,
+                    'suffix' => $suffix,
+                    'educational_level_id' => $smpId,
+                    'major_id' => null,
+                    'schedule_end_hour' => 14,
+                ];
+            }
+        }
+
+        // 3. SMA
         $smaMajors = DB::table('majors')->where('educational_level_id', $smaId)->get();
         for ($grade = 10; $grade <= 12; $grade++) {
             foreach ($smaMajors as $major) {
@@ -69,7 +84,7 @@ class AcademicSeeder extends Seeder
             }
         }
 
-        // 3. SMK
+        // 4. SMK
         $smkMajors = DB::table('majors')->where('educational_level_id', $smkId)->get();
         for ($grade = 10; $grade <= 12; $grade++) {
             foreach ($smkMajors as $major) {
@@ -125,13 +140,15 @@ class AcademicSeeder extends Seeder
                     'gender' => $faker->randomElement(['male', 'female']),
                     'date_of_birth' => $faker->date('Y-m-d', '2015-01-01'),
                     'address' => $faker->address,
-                    'created_at' => now(), 'updated_at' => now()
+                    'created_at' => now(),
+                    'updated_at' => now()
                 ];
                 $enrollmentsData[] = [
                     'class_id' => $classId,
                     'student_id' => $studentId,
                     'academic_year_id' => $academicYearId,
-                    'created_at' => now(), 'updated_at' => now()
+                    'created_at' => now(),
+                    'updated_at' => now()
                 ];
             }
             DB::table('user_roles')->insert($userRolesData);
