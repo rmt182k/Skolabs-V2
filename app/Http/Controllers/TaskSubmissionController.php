@@ -502,22 +502,16 @@ class TaskSubmissionController extends Controller
                 return response()->json(['success' => false, 'message' => 'Submission tidak ditemukan.'], 404);
             }
 
-            // [BARU] Set Grading Started At jika belum ada
-            if (is_null($submission->grading_started_at)) {
-                $startTime = now();
+            // [MODIFIED] Always reset Grading Started At when entering grading view
+            // This allows the timer to restart fresh on every "Review" click.
+            $startTime = now();
 
-                // Jika sudah ada durasi sebelumnya (misal edit nilai), mundurkan waktu mulai
-                if ($submission->grading_duration_seconds > 0) {
-                    $startTime = $startTime->subSeconds($submission->grading_duration_seconds);
-                }
+            DB::table('task_submissions')
+                ->where('id', $submission_id)
+                ->update(['grading_started_at' => $startTime]);
 
-                DB::table('task_submissions')
-                    ->where('id', $submission_id)
-                    ->update(['grading_started_at' => $startTime]);
-
-                // Update variable object agar langsung reflektif di return JSON
-                $submission->grading_started_at = $startTime->toDateTimeString();
-            }
+            // Update variable object agar langsung reflektif di return JSON
+            $submission->grading_started_at = $startTime->toDateTimeString();
 
             // ... (Logika status text Anda, ubah sedikit untuk status baru) ...
             switch ($submission->status) {
