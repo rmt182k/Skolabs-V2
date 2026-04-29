@@ -29,12 +29,12 @@
                     <i class="fas fa-tasks me-1"></i> Tugas & Ujian
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
+            {{-- <li class="nav-item" role="presentation">
                 <button class="nav-link" id="discussion-tab" data-bs-toggle="tab" data-bs-target="#discussion"
                     type="button" role="tab" aria-controls="discussion" aria-selected="false">
                     <i class="fas fa-comments me-1"></i> Diskusi
                 </button>
-            </li>
+            </li> --}}
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="students-tab-btn" data-bs-toggle="tab" data-bs-target="#students"
                     type="button" role="tab" aria-controls="students" aria-selected="false">
@@ -119,11 +119,11 @@
             </div>
 
             {{-- ================= TAB DISKUSI (DUMMY) ================= --}}
-            <div class="tab-pane fade" id="discussion" role="tabpanel" aria-labelledby="discussion-tab">
+            {{-- <div class="tab-pane fade" id="discussion" role="tabpanel" aria-labelledby="discussion-tab">
                 <div class="alert alert-info text-center">
                     <i class="fas fa-info-circle me-1"></i> Fitur diskusi sedang dalam pengembangan.
                 </div>
-            </div>
+            </div> --}}
 
             {{-- ================= TAB DAFTAR SISWA ================= --}}
             <div class="tab-pane fade" id="students" role="tabpanel" aria-labelledby="students-tab-btn">

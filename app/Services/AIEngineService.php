@@ -30,7 +30,7 @@ class AIEngineService
                 'gemini-1.5-flash' => 'Gemini 1.5 Flash',
                 'gemini-3-flash' => 'Gemini 3 Flash',
             ],
-            'default_model' => 'gemini-2.5-pro'
+            'default_model' => 'gemini-2.5-flash'
         ],
         'openai' => [
             'name' => 'OpenAI GPT',

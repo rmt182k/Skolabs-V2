@@ -215,7 +215,7 @@ $(document).ready(function () {
             // Tombol View Grades (Untuk Siswa yg sudah submit / Guru)
             if (can('view_grades') && task.submission_id) {
                 // Jika siswa sudah submit, dia bisa lihat nilai
-                const gradeUrl = `/classes/${CLASS_ID}/tasks/${task.id}/submissions/${task.submission_id}/grade`;
+                const gradeUrl = `/submissions/${task.submission_id}/report`;
                 buttonsHtml += `<a href="${gradeUrl}" class="btn btn-sm btn-outline-info me-1">
                                 <i class="fas fa-star me-1"></i> View Grades
                             </a>`;

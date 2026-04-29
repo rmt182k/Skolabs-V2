@@ -30,7 +30,7 @@ class DatabaseSeeder extends Seeder
         $this->call(AcademicSeeder::class);
 
         // 6. Task Demo (Baru)
-        $this->call(TaskDemoSeeder::class);
+        // $this->call(TaskDemoSeeder::class);
 
         // 7. Student Access (Baru)
         $this->call(StudentAccessSeeder::class);
